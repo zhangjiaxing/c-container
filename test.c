@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <errno.h>
+#include <string.h>
 
 
 #define SKIPLIST_MAXLEVEL 32 /* Should be enough for 2^64 elements */
@@ -129,15 +130,33 @@ void skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l){ \
     } \
 }
 
-//            printf("%d-", cur->key.KEY_FIELD); \
 
+static inline int element_compare_i32(int32_t e1, int32_t e2){
+    return e1 - e2;
+}
+
+static inline int element_compare_u32(uint32_t e1, uint32_t e2){
+    return e1 - e2;
+}
+
+static inline int element_compare_i64(int64_t e1, int64_t e2){
+    return e1 - e2;
+}
+
+static inline int element_compare_u64(uint64_t e1, uint64_t e2){
+    return e1 - e2;
+}
+
+static inline int element_compare_s(char *s1, char *s2){
+    return strcmp(s1, s2);
+}
 
 #define DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
 skip_node_t *skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, element_t key, element_t value){ \
     skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
     skip_node_t *cur = l->header; \
     for(int i=l->level-1; i>=0; i--){ \
-        while(cur->level[i] && cur->level[i]->key.KEY_FIELD < key.KEY_FIELD){ \
+        while(cur->level[i] && element_compare_##KEY_FIELD(cur->level[i]->key.KEY_FIELD , key.KEY_FIELD) < 0 ){ \
             cur = cur->level[i]; \
         } \
         update[i] = cur; \
