@@ -649,10 +649,22 @@ static const skip_list_create_func_t create_func_list[TPTR][TUNKNOW] = {
         skip_list_create_u32_f
     },
     {
-
+        skip_list_create_i64_i32,
+        skip_list_create_i64_u32,
+        skip_list_create_i64_i64,
+        skip_list_create_i64_u64,
+        skip_list_create_i64_s,
+        skip_list_create_i64_p,
+        skip_list_create_i64_f,
     },
     {
-
+        skip_list_create_u64_i32,
+        skip_list_create_u64_u32,
+        skip_list_create_u64_i64,
+        skip_list_create_u64_u64,
+        skip_list_create_u64_s,
+        skip_list_create_u64_p,
+        skip_list_create_u64_f,
     },
     {
         skip_list_create_s_i32,
@@ -672,6 +684,14 @@ static const skip_list_create_func_t create_func_list[TPTR][TUNKNOW] = {
     VALUE_TYPE __value__; \
     element_type_t __key_type__ = ELEMENT_TYPEID(__key__); \
     element_type_t __value_type__ = ELEMENT_TYPEID(__value_type__); \
+    if(__key_type__ > TSTR){ \
+        fprintf(stderr, "%s: line %d SKIP_LIST_CREATE key type error\n", __func__, __LINE__); \
+        _Exit(1); \
+    } \
+    if(__value_type__ > TDOUBLE){ \
+        fprintf(stderr, "%s: line %d SKIP_LIST_CREATE value type error\n", __func__, __LINE__); \
+        _Exit(1); \
+    } \
     list = create_func_list[__key_type__][__value_type__](); \
     } while(0)
 
@@ -740,6 +760,9 @@ int main(){
     }
     str_skiplist->print_func(str_skiplist);
     skip_list_destroy(str_skiplist);
+
+    skip_list_t *double_skiplist;
+    SKIP_LIST_CREATE(double_skiplist, double, int32_t);
 
 
     // skip_list_rank_print(sl);
