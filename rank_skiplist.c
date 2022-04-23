@@ -71,6 +71,17 @@ typedef union element {
 //         (node) = (l)->header->backward; \
 //         for (skip_node_t *tMp__=(node)->backward; (node)!=(l)->header; (node)=tMp__, tMp__=(node)->backward)
 
+#define DEF_ELEMENT_PRINT(TYPE, FIELD, PRINTF_FMT) \
+void print_element_##FIELD(element_t ele){ \
+    printf(PRINTF_FMT "-", ele.FIELD); \
+}
+
+
+DEF_ELEMENT_PRINT(char*, s, "%s")
+DEF_ELEMENT_PRINT(uint32_t, u32, "%lu")
+DEF_ELEMENT_PRINT(int32_t, i32, "%d")
+DEF_ELEMENT_PRINT(void*, p, "%p")
+
 
 typedef struct skip_node skip_node_t;
 typedef struct skip_list skip_list_t;
@@ -117,9 +128,30 @@ struct skip_list {
 //     return node;
 // }
 
-// void skip_node_destroy(skip_node_t *node){
-//     free(node);
-// }
+#define DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+skip_node_t *skip_node_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(int level, KEY_TYPE key, VALUE_TYPE value){ \
+    skip_node_t *node = malloc(sizeof(*node) + level*(sizeof(struct skiplist_level))); \
+    node->key.KEY_FIELD = key; \
+    node->value.VALUE_FIELD = value; \
+    return node; \
+}
+
+
+void skip_node_destroy(skip_node_t *node){
+    free(node);
+}
+
+#define DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+void skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l){ \
+    printf("\nskiplist: count %d\n", l->length); \
+    for(int i=l->level-1; i>=0; i--){ \
+        printf("level %d: ", i); \
+        for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){ \
+            print_element_##KEY_FIELD(cur->key); \
+        } \
+        printf("NULL\n"); \
+    } \
+}
 
 // skip_list_t* skip_list_create(){
 //     skip_list_t *slist = malloc(sizeof(*slist));
@@ -138,6 +170,28 @@ struct skip_list {
 //     return slist;
 // }
 
+#define DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+skip_list_t* skip_list_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(){ \
+    skip_list_t *slist = malloc(sizeof(*slist)); \
+    slist->level = 1; \
+    slist->length = 0; \
+    skip_node_t *header = skip_node_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(SKIPLIST_MAXLEVEL, (KEY_TYPE)0, (VALUE_TYPE)0); \
+    header->backward = header; \
+    for(int i=0; i<SKIPLIST_MAXLEVEL; i++){ \
+        header->level[i].forward = header; \
+        header->level[i].span = 0; \
+    } \
+    slist->header = header; \
+    slist->print_func = &skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD; \
+    return slist; \
+}//TODO:     slist->insert_func = &skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD; \
+
+
+
+DEF_SKIP_LIST_PRINT(uint32_t, u32, uint32_t, u32)
+DEF_SKIP_NODE_CREATE(uint32_t, u32, uint32_t, u32)
+DEF_SKIP_LIST_CREATE(uint32_t, u32, uint32_t, u32)
+
 // void skip_list_destroy(skip_list_t *l){
 //     skip_node_t *cur = l->header->level[0].forward;
 //     for(skip_node_t *next=cur->level[0].forward; cur!=l->header; cur=next, next=cur->level[0].forward){
@@ -147,13 +201,13 @@ struct skip_list {
 //     free(l);
 // }
 
-// static int random_level(void) {
-//     static const int threshold = SKIPLIST_P*RAND_MAX;
-//     int level = 1;
-//     while (random() < threshold)
-//         level += 1;
-//     return (level<SKIPLIST_MAXLEVEL) ? level : SKIPLIST_MAXLEVEL;
-// }
+static int random_level(void) {
+    static const int threshold = SKIPLIST_P*RAND_MAX;
+    int level = 1;
+    while (random() < threshold)
+        level += 1;
+    return (level<SKIPLIST_MAXLEVEL) ? level : SKIPLIST_MAXLEVEL;
+}
 
 // skip_node_t *skip_list_insert(skip_list_t *l, int key, int value){
 //     skip_node_t *update[SKIPLIST_MAXLEVEL] = {};
@@ -425,7 +479,9 @@ struct skip_list {
 
 
 int main(){
-    // skip_list_t *sl =  skip_list_create();
+    skip_list_t *sl =  skip_list_create_u32_u32();
+    sl->print_func(sl);
+    
 
     // int num_list[20];
     // for(int i=0; i<20; i++){
