@@ -19,28 +19,27 @@ typedef enum element_type {
     TUINT32,
     TINT64,
     TUINT64,
-    TFLOAT,
-    TDOUBLE,
     TSTR,
     TPTR,
+    TDOUBLE, //从double开始不能做key
     TUNKNOW
 } element_type_t;
 
+// float 传参时候会转换成double, 所以不支持float
+
 
 char* const element_typename_list[] = {
-    "i32", "u32", "i64", "u64", "float", "double", "string", "pointer", "unknow type"
+    "i32", "u32", "i64", "u64", "string", "pointer", "double", "unknow type"
 };
-
 
 typedef union element {
     int32_t i32;
     uint32_t u32;
     int64_t i64;
     uint64_t u64;
-    float f;
-    double d;
     char *s;
     void *p;
+    double f;
 } element_t;
 
 
@@ -48,8 +47,8 @@ typedef union element {
 #define ELEMENT_TYPEID(x) _Generic((x), \
                             int32_t: TINT32, uint32_t: TUINT32, \
                             int64_t: TINT64, uint64_t: TUINT64, \
-                            float: TFLOAT, double: TDOUBLE, \
                             char*: TSTR, void *: TPTR, \
+                            double: TDOUBLE, \
                             default: TUNKNOW )
 
 #define ELEMENT_TYPENAME(x) (element_typename_list[ELEMENT_TYPEID(x)])
@@ -82,8 +81,7 @@ DEF_ELEMENT_PRINT(uint32_t, u32, "%lu")
 DEF_ELEMENT_PRINT(int32_t, i32, "%d")
 DEF_ELEMENT_PRINT(int64_t, i64, "%lld")
 DEF_ELEMENT_PRINT(uint64_t, u64, "%llu")
-DEF_ELEMENT_PRINT(float, f, "%f")
-DEF_ELEMENT_PRINT(double, d, "%f")
+DEF_ELEMENT_PRINT(double, f, "%f")
 DEF_ELEMENT_PRINT(char*, s, "%s")
 DEF_ELEMENT_PRINT(void*, p, "%p")
 
@@ -589,8 +587,93 @@ skip_node_t *skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, el
 
 
 DEF_SKIP_LIST(int32_t, i32, int32_t, i32)
+DEF_SKIP_LIST(int32_t, i32, uint32_t, u32)
+DEF_SKIP_LIST(int32_t, i32, int64_t, i64)
+DEF_SKIP_LIST(int32_t, i32, uint64_t, u64)
+DEF_SKIP_LIST(int32_t, i32, char *, s)
+DEF_SKIP_LIST(int32_t, i32, void *, p)
+DEF_SKIP_LIST(int32_t, i32, double, f)
 
+DEF_SKIP_LIST(uint32_t, u32, int32_t, i32)
+DEF_SKIP_LIST(uint32_t, u32, uint32_t, u32)
+DEF_SKIP_LIST(uint32_t, u32, int64_t, i64)
+DEF_SKIP_LIST(uint32_t, u32, uint64_t, u64)
+DEF_SKIP_LIST(uint32_t, u32, char *, s)
+DEF_SKIP_LIST(uint32_t, u32, void *, p)
+DEF_SKIP_LIST(uint32_t, u32, double, f)
+
+DEF_SKIP_LIST(int64_t, i64, int32_t, i32)
+DEF_SKIP_LIST(int64_t, i64, uint32_t, u32)
+DEF_SKIP_LIST(int64_t, i64, int64_t, i64)
+DEF_SKIP_LIST(int64_t, i64, uint64_t, u64)
+DEF_SKIP_LIST(int64_t, i64, char *, s)
+DEF_SKIP_LIST(int64_t, i64, void *, p)
+DEF_SKIP_LIST(int64_t, i64, double, f)
+
+DEF_SKIP_LIST(uint64_t, u64, int32_t, i32)
+DEF_SKIP_LIST(uint64_t, u64, uint32_t, u32)
+DEF_SKIP_LIST(uint64_t, u64, int64_t, i64)
+DEF_SKIP_LIST(uint64_t, u64, uint64_t, u64)
+DEF_SKIP_LIST(uint64_t, u64, char *, s)
+DEF_SKIP_LIST(uint64_t, u64, void *, p)
+DEF_SKIP_LIST(uint64_t, u64, double, f)
+
+DEF_SKIP_LIST(char *, s, int32_t, i32)
+DEF_SKIP_LIST(char *, s, uint32_t, u32)
+DEF_SKIP_LIST(char *, s, int64_t, i64)
+DEF_SKIP_LIST(char *, s, uint64_t, u64)
+DEF_SKIP_LIST(char *, s, char *, s)
 DEF_SKIP_LIST(char *, s, void *, p)
+DEF_SKIP_LIST(char *, s, double, f)
+
+
+typedef skip_list_t* (*skip_list_create_func_t)();
+
+static const skip_list_create_func_t create_func_list[TPTR][TUNKNOW] = {
+    {
+        skip_list_create_i32_i32,
+        skip_list_create_i32_u32,
+        skip_list_create_i32_i64,
+        skip_list_create_i32_u64,
+        skip_list_create_i32_s,
+        skip_list_create_i32_p,
+        skip_list_create_i32_f
+    },
+    {
+        skip_list_create_u32_i32,
+        skip_list_create_u32_u32,
+        skip_list_create_u32_i64,
+        skip_list_create_u32_u64,
+        skip_list_create_u32_s,
+        skip_list_create_u32_p,
+        skip_list_create_u32_f
+    },
+    {
+
+    },
+    {
+
+    },
+    {
+        skip_list_create_s_i32,
+        skip_list_create_s_u32,
+        skip_list_create_s_i64,
+        skip_list_create_s_u64,
+        skip_list_create_s_s,
+        skip_list_create_s_p,
+        skip_list_create_s_f,
+    }
+};
+
+
+#define SKIP_LIST_CREATE(list, KEY_TYPE, VALUE_TYPE) \
+    do { \
+    KEY_TYPE __key__; \
+    VALUE_TYPE __value__; \
+    element_type_t __key_type__ = ELEMENT_TYPEID(__key__); \
+    element_type_t __value_type__ = ELEMENT_TYPEID(__value_type__); \
+    list = create_func_list[__key_type__][__value_type__](); \
+    } while(0)
 
 
 
@@ -599,7 +682,9 @@ DEF_SKIP_LIST(char *, s, void *, p)
 
 
 int main(){
-    skip_list_t *i32_skiplist =  skip_list_create_i32_i32();
+    // skip_list_t *i32_skiplist =  skip_list_create_i32_i32();
+    skip_list_t *i32_skiplist;
+    SKIP_LIST_CREATE(i32_skiplist, int32_t, int32_t);
 
     element_t key;
     element_t value;
@@ -644,7 +729,10 @@ int main(){
         NULL
     };
 
-    skip_list_t *str_skiplist = skip_list_create_s_p();
+    // skip_list_t *str_skiplist = skip_list_create_s_p();
+    skip_list_t *str_skiplist;
+    SKIP_LIST_CREATE(str_skiplist,  char *, void *);
+
     for(int i=0; words[i]!=NULL; i++){
         key.s = words[i];
         value.p = NULL;
