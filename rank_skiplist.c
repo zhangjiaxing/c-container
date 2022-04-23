@@ -578,13 +578,20 @@ skip_node_t *skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, el
 // }
 
 
-DEF_SKIP_LIST_PRINT(int32_t, i32, int32_t, i32)
-DEF_SKIP_NODE_CREATE(int32_t, i32, int32_t, i32)
-DECLARE_SKIP_LIST_INSERT(int32_t, i32, int32_t, i32)
-DECLARE_SKIP_LIST_FIND(int32_t, i32, int32_t, i32)
-DEF_SKIP_LIST_CREATE(int32_t, i32, int32_t, i32)
-DEF_SKIP_LIST_INSERT(int32_t, i32, int32_t, i32)
-DEF_SKIP_LIST_FIND(int32_t, i32, int32_t, i32)
+#define DEF_SKIP_LIST(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+    DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+    DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+    DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+    DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+    DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+    DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+    DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD)
+
+
+DEF_SKIP_LIST(int32_t, i32, int32_t, i32)
+
+DEF_SKIP_LIST(char *, s, void *, p)
+
 
 
 #define K 1000
@@ -618,6 +625,33 @@ int main(){
     }
 
     skip_list_destroy(i32_skiplist);
+
+    
+    static char * const words[] = {
+        "firefox",
+        "chrome",
+        "opera",
+        "bash",
+        "fish",
+        "zsh",
+        "ksh",
+        "csh",
+        "dash",
+        "vim",
+        "emacs",
+        "gedit",
+        "LibreOffice",
+        NULL
+    };
+
+    skip_list_t *str_skiplist = skip_list_create_s_p();
+    for(int i=0; words[i]!=NULL; i++){
+        key.s = words[i];
+        value.p = NULL;
+        str_skiplist->insert_func(str_skiplist, key, value);
+    }
+    str_skiplist->print_func(str_skiplist);
+    skip_list_destroy(str_skiplist);
 
 
     // skip_list_rank_print(sl);
