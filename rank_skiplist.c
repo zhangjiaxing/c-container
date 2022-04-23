@@ -20,8 +20,8 @@ typedef enum element_type {
     TINT64,
     TUINT64,
     TSTR,
-    TPTR,
-    TDOUBLE, //从double开始不能做key
+    TPTR, //从pointer开始暂时不支持做key
+    TDOUBLE,
     TUNKNOW
 } element_type_t;
 
@@ -52,6 +52,8 @@ typedef union element {
                             default: TUNKNOW )
 
 #define ELEMENT_TYPENAME(x) (element_typename_list[ELEMENT_TYPEID(x)])
+
+#define ELEMENT_TYPEIDNAME(typeid) ((typeid) > TUNKNOW? element_typename_list[TUNKNOW] : element_typename_list[(typeid)])
 
 
 // #define skip_list_foreach(node, l) \
@@ -131,11 +133,11 @@ struct skip_list {
 //     return node;
 // }
 
-#define DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-skip_node_t *skip_node_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(int level, KEY_TYPE key, VALUE_TYPE value){ \
+#define DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD) \
+skip_node_t *skip_node_create_ ## KEY_FIELD(int level, KEY_TYPE key, element_t value){ \
     skip_node_t *node = malloc(sizeof(*node) + level*(sizeof(struct skiplist_level))); \
     node->key.KEY_FIELD = key; \
-    node->value.VALUE_FIELD = value; \
+    node->value = value; \
     return node; \
 } \
 
@@ -144,8 +146,8 @@ void skip_node_destroy(skip_node_t *node){
     free(node);
 }
 
-#define DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-void skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l){ \
+#define DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD) \
+void skip_list_print_ ## KEY_FIELD(skip_list_t *l){ \
     printf("\nskiplist: count %d\n", l->length); \
     for(int i=l->level-1; i>=0; i--){ \
         printf("level %d: ", i); \
@@ -173,29 +175,31 @@ void skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l){ \
 //     return slist;
 // }
 
-#define DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-skip_node_t *skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, element_t key, element_t value);
+#define DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
+skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, element_t value);
 
 
-#define DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-skip_node_t *skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, element_t ele);
+#define DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
+skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele);
 
 
-#define DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-skip_list_t* skip_list_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(){ \
+#define DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
+skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
     skip_list_t *slist = malloc(sizeof(*slist)); \
     slist->level = 1; \
     slist->length = 0; \
-    skip_node_t *header = skip_node_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(SKIPLIST_MAXLEVEL, (KEY_TYPE)0, (VALUE_TYPE)0); \
+    skip_node_t *header = skip_node_create_ ## KEY_FIELD(SKIPLIST_MAXLEVEL, (KEY_TYPE)0, (element_t)0); \
     header->backward = header; \
     for(int i=0; i<SKIPLIST_MAXLEVEL; i++){ \
         header->level[i].forward = header; \
         header->level[i].span = 0; \
     } \
     slist->header = header; \
-    slist->print_func = &skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD; \
-    slist->insert_func = &skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD; \
-    slist->find_func = &skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD; \
+    slist->key_type = ELEMENT_TYPEID(header->key.KEY_FIELD); \
+    slist->value_type = value_type_id; \
+    slist->print_func = &skip_list_print_ ## KEY_FIELD; \
+    slist->insert_func = &skip_list_insert_ ## KEY_FIELD; \
+    slist->find_func = &skip_list_find_ ## KEY_FIELD; \
     return slist; \
 } \
 
@@ -296,12 +300,12 @@ static inline int element_compare_s(char *s1, char *s2){
 // }
 
 
-#define DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-skip_node_t *skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, element_t key, element_t value){ \
+#define DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
+skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, element_t value){ \
     skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
     unsigned long rank[SKIPLIST_MAXLEVEL] = {}; \
     int insert_level = random_level();\
-    skip_node_t *node = skip_node_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(insert_level, key.KEY_FIELD, value.VALUE_FIELD); \
+    skip_node_t *node = skip_node_create_ ## KEY_FIELD(insert_level, key.KEY_FIELD, value); \
     skip_node_t *cur = l->header; \
     for(int i=l->level-1; i>=0; i--){ \
         rank[i] = i == (l->level-1) ? 0 : rank[i+1]; \
@@ -358,8 +362,8 @@ skip_node_t *skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, 
 // }
 
 
-#define DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-skip_node_t *skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, element_t ele){ \
+#define DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
+skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
     KEY_TYPE key = ele.KEY_FIELD;  \
     skip_node_t *cur = l->header; \
     for (int i = l->level-1; i >= 0; i--) { \
@@ -576,105 +580,31 @@ skip_node_t *skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, el
 // }
 
 
-#define DEF_SKIP_LIST(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-    DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-    DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-    DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-    DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-    DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-    DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-    DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD)
+#define DEF_SKIP_LIST(KEY_TYPE, KEY_FIELD) \
+    DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
+    DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
+    DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD) \
+    DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD) \
+    DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
+    DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
+    DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD)
 
 
-DEF_SKIP_LIST(int32_t, i32, int32_t, i32)
-DEF_SKIP_LIST(int32_t, i32, uint32_t, u32)
-DEF_SKIP_LIST(int32_t, i32, int64_t, i64)
-DEF_SKIP_LIST(int32_t, i32, uint64_t, u64)
-DEF_SKIP_LIST(int32_t, i32, char *, s)
-DEF_SKIP_LIST(int32_t, i32, void *, p)
-DEF_SKIP_LIST(int32_t, i32, double, f)
-
-DEF_SKIP_LIST(uint32_t, u32, int32_t, i32)
-DEF_SKIP_LIST(uint32_t, u32, uint32_t, u32)
-DEF_SKIP_LIST(uint32_t, u32, int64_t, i64)
-DEF_SKIP_LIST(uint32_t, u32, uint64_t, u64)
-DEF_SKIP_LIST(uint32_t, u32, char *, s)
-DEF_SKIP_LIST(uint32_t, u32, void *, p)
-DEF_SKIP_LIST(uint32_t, u32, double, f)
-
-DEF_SKIP_LIST(int64_t, i64, int32_t, i32)
-DEF_SKIP_LIST(int64_t, i64, uint32_t, u32)
-DEF_SKIP_LIST(int64_t, i64, int64_t, i64)
-DEF_SKIP_LIST(int64_t, i64, uint64_t, u64)
-DEF_SKIP_LIST(int64_t, i64, char *, s)
-DEF_SKIP_LIST(int64_t, i64, void *, p)
-DEF_SKIP_LIST(int64_t, i64, double, f)
-
-DEF_SKIP_LIST(uint64_t, u64, int32_t, i32)
-DEF_SKIP_LIST(uint64_t, u64, uint32_t, u32)
-DEF_SKIP_LIST(uint64_t, u64, int64_t, i64)
-DEF_SKIP_LIST(uint64_t, u64, uint64_t, u64)
-DEF_SKIP_LIST(uint64_t, u64, char *, s)
-DEF_SKIP_LIST(uint64_t, u64, void *, p)
-DEF_SKIP_LIST(uint64_t, u64, double, f)
-
-DEF_SKIP_LIST(char *, s, int32_t, i32)
-DEF_SKIP_LIST(char *, s, uint32_t, u32)
-DEF_SKIP_LIST(char *, s, int64_t, i64)
-DEF_SKIP_LIST(char *, s, uint64_t, u64)
-DEF_SKIP_LIST(char *, s, char *, s)
-DEF_SKIP_LIST(char *, s, void *, p)
-DEF_SKIP_LIST(char *, s, double, f)
+DEF_SKIP_LIST(int32_t, i32)
+DEF_SKIP_LIST(uint32_t, u32)
+DEF_SKIP_LIST(int64_t, i64)
+DEF_SKIP_LIST(uint64_t, u64)
+DEF_SKIP_LIST(char *, s)
 
 
-typedef skip_list_t* (*skip_list_create_func_t)();
+typedef skip_list_t* (*skip_list_create_func_t)(element_type_t value_type_id);
 
-static const skip_list_create_func_t create_func_list[TPTR][TUNKNOW] = {
-    {
-        skip_list_create_i32_i32,
-        skip_list_create_i32_u32,
-        skip_list_create_i32_i64,
-        skip_list_create_i32_u64,
-        skip_list_create_i32_s,
-        skip_list_create_i32_p,
-        skip_list_create_i32_f
-    },
-    {
-        skip_list_create_u32_i32,
-        skip_list_create_u32_u32,
-        skip_list_create_u32_i64,
-        skip_list_create_u32_u64,
-        skip_list_create_u32_s,
-        skip_list_create_u32_p,
-        skip_list_create_u32_f
-    },
-    {
-        skip_list_create_i64_i32,
-        skip_list_create_i64_u32,
-        skip_list_create_i64_i64,
-        skip_list_create_i64_u64,
-        skip_list_create_i64_s,
-        skip_list_create_i64_p,
-        skip_list_create_i64_f,
-    },
-    {
-        skip_list_create_u64_i32,
-        skip_list_create_u64_u32,
-        skip_list_create_u64_i64,
-        skip_list_create_u64_u64,
-        skip_list_create_u64_s,
-        skip_list_create_u64_p,
-        skip_list_create_u64_f,
-    },
-    {
-        skip_list_create_s_i32,
-        skip_list_create_s_u32,
-        skip_list_create_s_i64,
-        skip_list_create_s_u64,
-        skip_list_create_s_s,
-        skip_list_create_s_p,
-        skip_list_create_s_f,
-    }
+static const skip_list_create_func_t create_func_list[TPTR] = {
+    skip_list_create_i32,
+    skip_list_create_u32,
+    skip_list_create_i64,
+    skip_list_create_u64,
+    skip_list_create_s
 };
 
 
@@ -683,16 +613,16 @@ static const skip_list_create_func_t create_func_list[TPTR][TUNKNOW] = {
     KEY_TYPE __key__; \
     VALUE_TYPE __value__; \
     element_type_t __key_type__ = ELEMENT_TYPEID(__key__); \
-    element_type_t __value_type__ = ELEMENT_TYPEID(__value_type__); \
+    element_type_t __value_type__ = ELEMENT_TYPEID(__value__); \
     if(__key_type__ > TSTR){ \
-        fprintf(stderr, "%s: line %d SKIP_LIST_CREATE key type error\n", __func__, __LINE__); \
+        fprintf(stderr, "%s: line %d SKIP_LIST_CREATE key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
     if(__value_type__ > TDOUBLE){ \
-        fprintf(stderr, "%s: line %d SKIP_LIST_CREATE value type error\n", __func__, __LINE__); \
+        fprintf(stderr, "%s: line %d SKIP_LIST_CREATE value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
         _Exit(1); \
     } \
-    list = create_func_list[__key_type__][__value_type__](); \
+    list = create_func_list[__key_type__](__value_type__); \
     } while(0)
 
 
@@ -702,7 +632,6 @@ static const skip_list_create_func_t create_func_list[TPTR][TUNKNOW] = {
 
 
 int main(){
-    // skip_list_t *i32_skiplist =  skip_list_create_i32_i32();
     skip_list_t *i32_skiplist;
     SKIP_LIST_CREATE(i32_skiplist, int32_t, int32_t);
 
@@ -713,15 +642,12 @@ int main(){
         key.i32 = random() % 100;
         value.i32 = -key.i32;
         i32_skiplist->insert_func(i32_skiplist, key, value);
-        // skip_node_t *node = skip_list_insert_i32_i32(i32_skiplist, key, value);
     }
 
     i32_skiplist->print_func(i32_skiplist);
-    // skip_list_print_i32_i32(i32_skiplist);
 
     skip_node_t *node;
     key.i32 = 56;
-    // node = skip_list_find_i32_i32(i32_skiplist, key);
     node = i32_skiplist->find_func(i32_skiplist, key);
     if(node != NULL){
         fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
