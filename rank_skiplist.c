@@ -198,14 +198,14 @@ skip_list_t* skip_list_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(){ \
 
 
 
-// void skip_list_destroy(skip_list_t *l){
-//     skip_node_t *cur = l->header->level[0].forward;
-//     for(skip_node_t *next=cur->level[0].forward; cur!=l->header; cur=next, next=cur->level[0].forward){
-//         skip_node_destroy(cur);
-//     }
-//     skip_node_destroy(l->header);
-//     free(l);
-// }
+void skip_list_destroy(skip_list_t *l){
+    skip_node_t *cur = l->header->level[0].forward;
+    for(skip_node_t *next=cur->level[0].forward; cur!=l->header; cur=next, next=cur->level[0].forward){
+        skip_node_destroy(cur);
+    }
+    skip_node_destroy(l->header);
+    free(l);
+}
 
 static int random_level(void) {
     static const int threshold = SKIPLIST_P*RAND_MAX;
@@ -575,6 +575,8 @@ int main(){
 
     // i32_skiplist->print_func(i32_skiplist);
     skip_list_print_i32_i32(i32_skiplist);
+
+    skip_list_destroy(i32_skiplist);
 
 
     // skip_list_rank_print(sl);
