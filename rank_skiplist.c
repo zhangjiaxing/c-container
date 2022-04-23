@@ -354,6 +354,29 @@ skip_node_t *skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, 
 //     return NULL;
 // }
 
+
+#define DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+skip_node_t *skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, KEY_TYPE key){ \
+    skip_node_t *cur = l->header; \
+    for (int i = l->level-1; i >= 0; i--) { \
+        while(cur->level[i].forward != l->header){ \
+            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD, key); \
+            if(comp < 0){ \
+                cur = cur->level[i].forward; \
+            }else { \
+                break; \
+            } \
+        } \
+    } \
+    skip_node_t *next = cur->level[0].forward; \
+    if(next != l->header && element_compare_##KEY_FIELD(next->key.KEY_FIELD, key) == 0){ \
+        return next; \
+    }else{ \
+       return NULL; \
+    } \
+} \
+
+
 // void skip_list_print(skip_list_t *l){
 //     printf("list count: %lu, level is %d.\n", l->length, l->level);
 //     for(int i=l->level-1; i>=0; i--){
@@ -555,6 +578,8 @@ DECLARE_SKIP_LIST_INSERT(int32_t, i32, int32_t, i32)
 DEF_SKIP_LIST_CREATE(int32_t, i32, int32_t, i32)
 DEF_SKIP_LIST_INSERT(int32_t, i32, int32_t, i32)
 
+DEF_SKIP_LIST_FIND(int32_t, i32, int32_t, i32)
+
 
 #define K 1000
 #define M (1000*1000)
@@ -567,14 +592,22 @@ int main(){
     element_t value;
     int num_list[20];
     for(int i=0; i<20; i++){
-        key.u32 = random() % 100;
-        value.u32 = key.u32 * 2;
-        // i32_skiplist->insert_func(i32_skiplist, key, value);
-        skip_node_t *node = skip_list_insert_i32_i32(i32_skiplist, key, value);
+        key.i32 = random() % 100;
+        value.i32 = -key.i32;
+        i32_skiplist->insert_func(i32_skiplist, key, value);
+        // skip_node_t *node = skip_list_insert_i32_i32(i32_skiplist, key, value);
     }
 
-    // i32_skiplist->print_func(i32_skiplist);
-    skip_list_print_i32_i32(i32_skiplist);
+    i32_skiplist->print_func(i32_skiplist);
+    // skip_list_print_i32_i32(i32_skiplist);
+
+    skip_node_t *node;
+    node = skip_list_find_i32_i32(i32_skiplist, 56);
+    if(node != NULL){
+        fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
+    }else{
+        fprintf(stderr, "not found\n");
+    }
 
     skip_list_destroy(i32_skiplist);
 
@@ -582,7 +615,6 @@ int main(){
     // skip_list_rank_print(sl);
     // skip_list_addr_print(sl);
 
-    // skip_node_t *node;
 
     // int delete_ele[] = {11,22,33,3,3,3,5,7,7,7,19,19,-1};
     // for(int i=0; delete_ele[i]!=-1; i++){
@@ -591,12 +623,7 @@ int main(){
     // }
     // fprintf(stderr, "skiplist count is %lu, level is %d.\n", sl->length, sl->level);
 
-    // node = skip_list_find(sl, 6);
-    // if(node != NULL){
-    //     fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
-    // }else{
-    //     fprintf(stderr, "not found\n");
-    // }
+
 
     // fprintf(stderr, "==== test print\n");
     // skip_list_rank_print(sl);
