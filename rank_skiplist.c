@@ -179,6 +179,10 @@ void skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l){ \
 skip_node_t *skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, element_t key, element_t value);
 
 
+#define DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+skip_node_t *skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, element_t ele);
+
+
 #define DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
 skip_list_t* skip_list_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(){ \
     skip_list_t *slist = malloc(sizeof(*slist)); \
@@ -193,6 +197,7 @@ skip_list_t* skip_list_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(){ \
     slist->header = header; \
     slist->print_func = &skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD; \
     slist->insert_func = &skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD; \
+    slist->find_func = &skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD; \
     return slist; \
 } \
 
@@ -356,7 +361,8 @@ skip_node_t *skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, 
 
 
 #define DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
-skip_node_t *skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, KEY_TYPE key){ \
+skip_node_t *skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, element_t ele){ \
+    KEY_TYPE key = ele.KEY_FIELD;  \
     skip_node_t *cur = l->header; \
     for (int i = l->level-1; i >= 0; i--) { \
         while(cur->level[i].forward != l->header){ \
@@ -575,9 +581,9 @@ skip_node_t *skip_list_find_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, KE
 DEF_SKIP_LIST_PRINT(int32_t, i32, int32_t, i32)
 DEF_SKIP_NODE_CREATE(int32_t, i32, int32_t, i32)
 DECLARE_SKIP_LIST_INSERT(int32_t, i32, int32_t, i32)
+DECLARE_SKIP_LIST_FIND(int32_t, i32, int32_t, i32)
 DEF_SKIP_LIST_CREATE(int32_t, i32, int32_t, i32)
 DEF_SKIP_LIST_INSERT(int32_t, i32, int32_t, i32)
-
 DEF_SKIP_LIST_FIND(int32_t, i32, int32_t, i32)
 
 
@@ -602,7 +608,9 @@ int main(){
     // skip_list_print_i32_i32(i32_skiplist);
 
     skip_node_t *node;
-    node = skip_list_find_i32_i32(i32_skiplist, 56);
+    key.i32 = 56;
+    // node = skip_list_find_i32_i32(i32_skiplist, key);
+    node = i32_skiplist->find_func(i32_skiplist, key);
     if(node != NULL){
         fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
     }else{
