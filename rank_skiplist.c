@@ -55,6 +55,40 @@ typedef union element {
 
 #define ELEMENT_TYPEIDNAME(typeid) ((typeid) > TUNKNOW? element_typename_list[TUNKNOW] : element_typename_list[(typeid)])
 
+//TODO
+#define ELEMENT_FROM(ele, x) \
+    do { \
+        element_type_t __type_id__ = ELEMENT_TYPEID(x); \
+        switch (__type_id__) \
+        { \
+        case TINT32: \
+            (ele).i32 = (int32_t)(x); \
+            break; \
+        case TUINT32: \
+            (ele).u32 = (uint32_t)(x); \
+            break; \
+        case TINT64: \
+            (ele).i64 = (int64_t)(x); \
+            break; \
+        case TUINT64: \
+            (ele).u64 = (uint64_t)(x); \
+            break; \
+        case TSTR: \
+            (ele).s = (char *)(x); \
+            break; \
+        case TPTR: \
+            (ele).p = (void *)(x); \
+            break; \
+        case TDOUBLE: \
+            (ele).f = (double)(x); \
+            break; \
+        default: \
+            fprintf(stderr, "%s: line %d ELEMENT_FROM type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__type_id__)); \
+            _Exit(1); \
+            break; \
+        } \
+    }while(0)
+
 
 // #define skip_list_foreach(node, l) \
 //         for ((node) = (l)->header->level[0].forward; (node)!=(l)->header; (node)=(node)->level[0].forward)
@@ -202,7 +236,6 @@ skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
     slist->find_func = &skip_list_find_ ## KEY_FIELD; \
     return slist; \
 } \
-
 
 
 void skip_list_destroy(skip_list_t *l){
@@ -626,6 +659,25 @@ static const skip_list_create_func_t create_func_list[TPTR] = {
     } while(0)
 
 
+#define SKIP_LIST_INSERT(list, KEY, VALUE) \
+    do { \
+    element_t __key__; \
+    element_t __value__; \
+    element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
+    element_type_t __value_type__ = ELEMENT_TYPEID(VALUE); \
+    if(__key_type__ != list->key_type){ \
+        fprintf(stderr, "%s: line %d SKIP_LIST_INSERT key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
+        _Exit(1); \
+    } \
+    if(__value_type__ != list->value_type){ \
+        fprintf(stderr, "%s: line %d SKIP_LIST_INSERT value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
+        _Exit(1); \
+    } \
+    ELEMENT_FROM(__key__, KEY); \
+    ELEMENT_FROM(__value__, VALUE); \
+    list->insert_func(list, __key__, __value__); \
+    }while(0)
+
 
 #define K 1000
 #define M (1000*1000)
@@ -675,14 +727,14 @@ int main(){
         NULL
     };
 
-    // skip_list_t *str_skiplist = skip_list_create_s_p();
     skip_list_t *str_skiplist;
     SKIP_LIST_CREATE(str_skiplist,  char *, void *);
 
     for(int i=0; words[i]!=NULL; i++){
         key.s = words[i];
         value.p = NULL;
-        str_skiplist->insert_func(str_skiplist, key, value);
+        // str_skiplist->insert_func(str_skiplist, key, value);
+        SKIP_LIST_INSERT(str_skiplist, words[i], NULL);
     }
     str_skiplist->print_func(str_skiplist);
     skip_list_destroy(str_skiplist);
