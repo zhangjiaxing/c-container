@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <limits.h>
 #include <errno.h>
 
@@ -77,9 +78,13 @@ void print_element_##FIELD(element_t ele){ \
 }
 
 
-DEF_ELEMENT_PRINT(char*, s, "%s")
 DEF_ELEMENT_PRINT(uint32_t, u32, "%lu")
 DEF_ELEMENT_PRINT(int32_t, i32, "%d")
+DEF_ELEMENT_PRINT(int64_t, i64, "%lld")
+DEF_ELEMENT_PRINT(uint64_t, u64, "%llu")
+DEF_ELEMENT_PRINT(float, f, "%f")
+DEF_ELEMENT_PRINT(double, d, "%f")
+DEF_ELEMENT_PRINT(char*, s, "%s")
 DEF_ELEMENT_PRINT(void*, p, "%p")
 
 
@@ -134,7 +139,7 @@ skip_node_t *skip_node_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(int level, KEY_T
     node->key.KEY_FIELD = key; \
     node->value.VALUE_FIELD = value; \
     return node; \
-}
+} \
 
 
 void skip_node_destroy(skip_node_t *node){
@@ -151,7 +156,7 @@ void skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l){ \
         } \
         printf("NULL\n"); \
     } \
-}
+} \
 
 // skip_list_t* skip_list_create(){
 //     skip_list_t *slist = malloc(sizeof(*slist));
@@ -170,6 +175,10 @@ void skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l){ \
 //     return slist;
 // }
 
+#define DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+skip_node_t *skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, element_t key, element_t value);
+
+
 #define DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
 skip_list_t* skip_list_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(){ \
     skip_list_t *slist = malloc(sizeof(*slist)); \
@@ -183,14 +192,11 @@ skip_list_t* skip_list_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(){ \
     } \
     slist->header = header; \
     slist->print_func = &skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD; \
+    slist->insert_func = &skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD; \
     return slist; \
-}//TODO:     slist->insert_func = &skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD; \
+} \
 
 
-
-DEF_SKIP_LIST_PRINT(uint32_t, u32, uint32_t, u32)
-DEF_SKIP_NODE_CREATE(uint32_t, u32, uint32_t, u32)
-DEF_SKIP_LIST_CREATE(uint32_t, u32, uint32_t, u32)
 
 // void skip_list_destroy(skip_list_t *l){
 //     skip_node_t *cur = l->header->level[0].forward;
@@ -208,6 +214,28 @@ static int random_level(void) {
         level += 1;
     return (level<SKIPLIST_MAXLEVEL) ? level : SKIPLIST_MAXLEVEL;
 }
+
+
+static inline int element_compare_i32(int32_t e1, int32_t e2){
+    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
+}
+
+static inline int element_compare_u32(uint32_t e1, uint32_t e2){
+    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
+}
+
+static inline int element_compare_i64(int64_t e1, int64_t e2){
+    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
+}
+
+static inline int element_compare_u64(uint64_t e1, uint64_t e2){
+    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
+}
+
+static inline int element_compare_s(char *s1, char *s2){
+    return strcmp(s1, s2);
+}
+
 
 // skip_node_t *skip_list_insert(skip_list_t *l, int key, int value){
 //     skip_node_t *update[SKIPLIST_MAXLEVEL] = {};
@@ -263,6 +291,53 @@ static int random_level(void) {
 
 //     return node;
 // }
+
+
+#define DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD, VALUE_TYPE, VALUE_FIELD) \
+skip_node_t *skip_list_insert_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l, element_t key, element_t value){ \
+    skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
+    unsigned long rank[SKIPLIST_MAXLEVEL] = {}; \
+    int insert_level = random_level();\
+    skip_node_t *node = skip_node_create_ ## KEY_FIELD ## _ ## VALUE_FIELD(insert_level, key.KEY_FIELD, value.VALUE_FIELD); \
+    skip_node_t *cur = l->header; \
+    for(int i=l->level-1; i>=0; i--){ \
+        rank[i] = i == (l->level-1) ? 0 : rank[i+1]; \
+        while(cur->level[i].forward != l->header){ \
+            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD , key.KEY_FIELD); \
+            if(comp < 0 || comp == 0 && cur->level[i].forward < node){ \
+                rank[i] += cur->level[i].span;\
+                cur = cur->level[i].forward; \
+            }else{\
+                break; \
+            } \
+        } \
+        update[i] = cur; \
+    } \
+    if(insert_level > l->level){ \
+        for(int i=l->level; i<insert_level; i++){ \
+            rank[i] = 0; \
+            update[i] = l->header; \
+            update[i]->level[i].span = l->length; \
+        } \
+        l->level = insert_level; \
+    } \
+    for(int i=0; i<insert_level ; i++){ \
+        node->level[i].forward = update[i]->level[i].forward; \
+        skip_node_t *prev = update[i]; \
+        prev->level[i].forward = node; \
+        node->level[i].span = prev->level[i].span - (rank[0] - rank[i]); \
+        prev->level[i].span = (rank[0] - rank[i])+1; \
+    } \
+    node->backward = update[0]; \
+    node->level[0].forward->backward = node; \
+    for(int i=insert_level; i < l->level; i++){ \
+        update[i]->level[i].span++; \
+    } \
+    l->length++; \
+    return node; \
+} \
+
+
 
 // skip_node_t *skip_list_find(skip_list_t *l, int key){
 //     skip_node_t *cur = l->header;
@@ -474,23 +549,33 @@ static int random_level(void) {
 // }
 
 
+DEF_SKIP_LIST_PRINT(int32_t, i32, int32_t, i32)
+DEF_SKIP_NODE_CREATE(int32_t, i32, int32_t, i32)
+DECLARE_SKIP_LIST_INSERT(int32_t, i32, int32_t, i32)
+DEF_SKIP_LIST_CREATE(int32_t, i32, int32_t, i32)
+DEF_SKIP_LIST_INSERT(int32_t, i32, int32_t, i32)
+
+
 #define K 1000
 #define M (1000*1000)
 
 
 int main(){
-    skip_list_t *sl =  skip_list_create_u32_u32();
-    sl->print_func(sl);
-    
+    skip_list_t *i32_skiplist =  skip_list_create_i32_i32();
 
-    // int num_list[20];
-    // for(int i=0; i<20; i++){
-    //     num_list[i] = random() % 20;
-    // }
+    element_t key;
+    element_t value;
+    int num_list[20];
+    for(int i=0; i<20; i++){
+        key.u32 = random() % 100;
+        value.u32 = key.u32 * 2;
+        // i32_skiplist->insert_func(i32_skiplist, key, value);
+        skip_node_t *node = skip_list_insert_i32_i32(i32_skiplist, key, value);
+    }
 
-    // for(int i=0; i<20; i++){
-    //     skip_list_insert(sl, num_list[i],  -num_list[i]);
-    // }
+    // i32_skiplist->print_func(i32_skiplist);
+    skip_list_print_i32_i32(i32_skiplist);
+
 
     // skip_list_rank_print(sl);
     // skip_list_addr_print(sl);

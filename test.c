@@ -132,19 +132,27 @@ void skip_list_print_ ## KEY_FIELD ## _ ## VALUE_FIELD(skip_list_t *l){ \
 
 
 static inline int element_compare_i32(int32_t e1, int32_t e2){
-    return e1 - e2;
+    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
 }
 
 static inline int element_compare_u32(uint32_t e1, uint32_t e2){
-    return e1 - e2;
+    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
 }
 
 static inline int element_compare_i64(int64_t e1, int64_t e2){
-    return e1 - e2;
+    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
 }
 
 static inline int element_compare_u64(uint64_t e1, uint64_t e2){
-    return e1 - e2;
+    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
+}
+
+static inline int element_compare_f(float e1, float e2){
+    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
+}
+
+static inline int element_compare_d(double e1, double e2){
+    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
 }
 
 static inline int element_compare_s(char *s1, char *s2){
