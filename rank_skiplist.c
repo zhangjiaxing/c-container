@@ -58,36 +58,40 @@ typedef union element {
 //TODO
 #define ELEMENT_FROM(ele, x) \
     do { \
-        element_type_t __type_id__ = ELEMENT_TYPEID(x); \
-        switch (__type_id__) \
-        { \
-        case TINT32: \
-            (ele).i32 = (int32_t)(x); \
-            break; \
-        case TUINT32: \
-            (ele).u32 = (uint32_t)(x); \
-            break; \
-        case TINT64: \
-            (ele).i64 = (int64_t)(x); \
-            break; \
-        case TUINT64: \
-            (ele).u64 = (uint64_t)(x); \
-            break; \
-        case TSTR: \
-            (ele).s = (char *)(x); \
-            break; \
-        case TPTR: \
-            (ele).p = (void *)(x); \
-            break; \
-        case TDOUBLE: \
-            (ele).f = (double)(x); \
-            break; \
-        default: \
-            fprintf(stderr, "%s: line %d ELEMENT_FROM type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__type_id__)); \
-            _Exit(1); \
-            break; \
-        } \
-    }while(0)
+        ele = (element_t)x; \
+    } while(0)
+
+    // do { \
+    //     element_type_t __type_id__ = ELEMENT_TYPEID(x); \
+    //     switch (__type_id__) \
+    //     { \
+    //     case TINT32: \
+    //         (ele).i32 = (int32_t)(x); \
+    //         break; \
+    //     case TUINT32: \
+    //         (ele).u32 = (uint32_t)(x); \
+    //         break; \
+    //     case TINT64: \
+    //         (ele).i64 = (int64_t)(x); \
+    //         break; \
+    //     case TUINT64: \
+    //         (ele).u64 = (uint64_t)(x); \
+    //         break; \
+    //     case TSTR: \
+    //         (ele).s = (char *)(x); \
+    //         break; \
+    //     case TPTR: \
+    //         (ele).p = (void *)(x); \
+    //         break; \
+    //     case TDOUBLE: \
+    //         (ele).f = (double)(x); \
+    //         break; \
+    //     default: \
+    //         fprintf(stderr, "%s: line %d ELEMENT_FROM type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__type_id__)); \
+    //         _Exit(1); \
+    //         break; \
+    //     } \
+    // }while(0)
 
 
 // #define skip_list_foreach(node, l) \
@@ -691,9 +695,11 @@ int main(){
     element_t value;
     int num_list[20];
     for(int i=0; i<20; i++){
-        key.i32 = random() % 100;
-        value.i32 = -key.i32;
-        i32_skiplist->insert_func(i32_skiplist, key, value);
+        int32_t n = random() % 100;
+        // key.i32 = n;
+        // value.i32 = -n;
+        // i32_skiplist->insert_func(i32_skiplist, key, value);
+        SKIP_LIST_INSERT(i32_skiplist, n, -n);
     }
 
     i32_skiplist->print_func(i32_skiplist);
