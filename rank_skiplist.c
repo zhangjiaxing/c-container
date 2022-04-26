@@ -111,9 +111,11 @@ typedef union element {
 //         (node) = (l)->header->backward; \
 //         for (skip_node_t *tMp__=(node)->backward; (node)!=(l)->header; (node)=tMp__, tMp__=(node)->backward)
 
+
+//    printf(PRINTF_FMT "-", ele.FIELD);
 #define DEF_ELEMENT_PRINT(TYPE, FIELD, PRINTF_FMT) \
 void print_element_##FIELD(element_t ele){ \
-    printf(PRINTF_FMT "-", ele.FIELD); \
+    printf(PRINTF_FMT, ele.FIELD); \
 }
 
 
@@ -190,9 +192,10 @@ void skip_node_destroy(skip_node_t *node){
 void skip_list_print_ ## KEY_FIELD(skip_list_t *l){ \
     printf("\nskiplist: count %d\n", l->length); \
     for(int i=l->level-1; i>=0; i--){ \
-        printf("level %d: ", i); \
+        printf("level %d(span%lu): ", i,l->header->level[i].span); \
         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){ \
             print_element_##KEY_FIELD(cur->key); \
+            printf("(span%d)-", cur->level[i].span); \
         } \
         printf("NULL\n"); \
     } \
