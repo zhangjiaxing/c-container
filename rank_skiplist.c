@@ -131,7 +131,7 @@ typedef struct skip_list skip_list_t;
 
 
 typedef skip_node_t* (*insert_func_t)(skip_list_t *l, element_t key, element_t value);
-typedef element_t (*remove_func_t)(skip_list_t *l, element_t key);
+typedef int (*remove_func_t)(skip_list_t *l, element_t key);
 typedef skip_node_t* (*find_func_t)(skip_list_t *l, element_t key);
 typedef void (*print_func_t)(skip_list_t *l);
 
@@ -220,6 +220,9 @@ skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, eleme
 #define DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
 skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele);
 
+#define DECLARE_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
+int skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele);
+
 
 #define DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
 skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
@@ -237,6 +240,7 @@ skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
     slist->value_type = value_type_id; \
     slist->print_func = &skip_list_print_ ## KEY_FIELD; \
     slist->insert_func = &skip_list_insert_ ## KEY_FIELD; \
+    slist->remove_func = &skip_list_remove_ ## KEY_FIELD; \
     slist->find_func = &skip_list_find_ ## KEY_FIELD; \
     return slist; \
 } \
@@ -499,6 +503,47 @@ skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
 //     return 0;
 // }
 
+
+#define DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
+int skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
+    KEY_TYPE key = ele.KEY_FIELD;  \
+    skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
+    skip_node_t *cur = l->header; \
+    for(int i=l->level-1; i>=0; i--){ \
+        while(cur->level[i].forward != l->header){ \
+            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD, key); \
+            if(comp < 0){ \
+                cur = cur->level[i].forward; \
+            }else { \
+                break; \
+            } \
+        } \
+        update[i] = cur; \
+    } \
+    cur = cur->level[0].forward; \
+    if(cur == l->header || element_compare_##KEY_FIELD(cur->key.KEY_FIELD, key) != 0){ \
+        return ENOENT; \
+    } \
+    for(int i=l->level-1; i>=0 ; i--){ \
+        skip_node_t *prev = update[i]; \
+        if(prev->level[i].forward == cur){ \
+            prev->level[i].span  += cur->level[i].span - 1; \
+            prev->level[i].forward = cur->level[i].forward; \
+        }else{ \
+            prev->level[i].span --; \
+        } \
+    } \
+    skip_node_t *next = cur->level[0].forward; \
+    next->backward = update[0]; \
+    skip_node_destroy(cur); \
+    l->length--; \
+    while(l->level>1 && l->header->level[l->level-1].forward == l->header){ \
+        l->level--; \
+    } \
+    return 0; \
+}
+
+
 // int skip_list_remove_node(skip_list_t *l, skip_node_t *node){
 //     // if(node == NULL || node == l->header){
 //     //     return ENOENT;
@@ -619,10 +664,12 @@ skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
 
 #define DEF_SKIP_LIST(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
+    DECLARE_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
+    DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD)
 
@@ -743,6 +790,10 @@ int main(){
         SKIP_LIST_INSERT(str_skiplist, words[i], NULL);
     }
     str_skiplist->print_func(str_skiplist);
+    skip_list_remove_s(str_skiplist, (element_t)"opera");
+    fprintf(stderr, "xxxxxxxxxxxxxx\n");
+    str_skiplist->print_func(str_skiplist);
+
     skip_list_destroy(str_skiplist);
 
     skip_list_t *double_skiplist;
