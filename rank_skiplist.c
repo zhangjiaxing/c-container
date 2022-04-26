@@ -132,6 +132,7 @@ typedef struct skip_list skip_list_t;
 
 typedef skip_node_t* (*insert_func_t)(skip_list_t *l, element_t key, element_t value);
 typedef int (*remove_func_t)(skip_list_t *l, element_t key);
+typedef int (*remove_node_func_t)(skip_list_t *l, skip_node_t *node);
 typedef skip_node_t* (*find_func_t)(skip_list_t *l, element_t key);
 typedef void (*print_func_t)(skip_list_t *l);
 
@@ -160,6 +161,7 @@ struct skip_list {
     
     insert_func_t insert_func;
     remove_func_t remove_func;
+    remove_node_func_t remove_node;
     find_func_t find_func;
     print_func_t print_func;
 };
@@ -220,8 +222,13 @@ skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, eleme
 #define DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
 skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele);
 
+
 #define DECLARE_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
 int skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele);
+
+
+#define DECLARE_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
+int skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node);
 
 
 #define DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
@@ -241,6 +248,7 @@ skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
     slist->print_func = &skip_list_print_ ## KEY_FIELD; \
     slist->insert_func = &skip_list_insert_ ## KEY_FIELD; \
     slist->remove_func = &skip_list_remove_ ## KEY_FIELD; \
+    slist->remove_node = &skip_list_remove_node_ ## KEY_FIELD; \
     slist->find_func = &skip_list_find_ ## KEY_FIELD; \
     return slist; \
 } \
@@ -598,6 +606,51 @@ int skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
 // }
 
 
+#define DEF_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
+int skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node){ \
+    if(node == NULL || node == l->header){ \
+        return ENOENT; \
+    } \
+    element_t ele = node->key; \
+    skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
+    skip_node_t *cur = l->header; \
+    for(int i=l->level-1; i>=0; i--){ \
+        while(cur->level[i].forward != l->header){ \
+            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD , ele.KEY_FIELD); \
+            if(comp < 0 || comp == 0 && cur->level[i].forward < node){ \
+                cur = cur->level[i].forward; \
+            }else{ \
+                break; \
+            } \
+        } \
+        update[i] = cur; \
+    } \
+    cur = cur->level[0].forward; \
+    if(cur == l->header || cur != node){ \
+        return ENOENT; \
+    } \
+    skip_node_t *prev; \
+    for(int i=l->level-1; i>=0 ; i--){ \
+        prev = update[i]; \
+        if(prev->level[i].forward == node){ \
+            prev->level[i].span  += cur->level[i].span - 1; \
+            prev->level[i].forward = cur->level[i].forward; \
+        }else{ \
+            prev->level[i].span--; \
+        } \
+    } \
+    skip_node_t *next = node->level[0].forward; \
+    next->backward = update[0]; \
+    skip_node_destroy(node); \
+    l->length--; \
+    while(l->level>1 && l->header->level[l->level-1].forward == l->header){ \
+        l->level--; \
+    } \
+    return 0; \
+}
+
+
+
 // unsigned long skip_list_get_rank(skip_list_t *l, int key){
 //     unsigned long rank = 0;
 //     skip_node_t *cur = l->header;
@@ -665,11 +718,13 @@ int skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
 #define DEF_SKIP_LIST(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
+    DECLARE_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
+    DEF_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD)
 
@@ -756,10 +811,12 @@ int main(){
     node = i32_skiplist->find_func(i32_skiplist, key);
     if(node != NULL){
         fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
+        i32_skiplist->remove_node(i32_skiplist, node);
     }else{
         fprintf(stderr, "not found\n");
     }
-
+    fprintf(stderr, "TTTTTTTTTTTTTTTT\n");
+    i32_skiplist->print_func(i32_skiplist);
     skip_list_destroy(i32_skiplist);
 
     
