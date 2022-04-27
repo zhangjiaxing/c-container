@@ -1,10 +1,10 @@
-all: ranklist
+all: skiplist
 .PHONY: all
 
-ranklist: rank_skiplist.c
+ranklist: skiplist.c
 	$(CC) $^ -o $@ 
 
 clean:
-	rm -rf ranklist
+	rm -rf skiplist
 
 .PHONY: clean
