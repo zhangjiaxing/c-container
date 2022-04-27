@@ -145,7 +145,7 @@ typedef int (*remove_func_t)(skip_list_t *l, element_t key);
 typedef int (*remove_node_func_t)(skip_list_t *l, skip_node_t *node);
 typedef unsigned long (*get_rank_func_t)(skip_list_t *l, element_t ele);
 typedef unsigned long (*get_node_rank_func_t)(skip_list_t *l, skip_node_t *node);
-typedef skip_node_t (*get_node_by_rank_func_t)(skip_list_t *l, unsigned long rank);
+typedef skip_node_t* (*get_node_by_rank_func_t)(skip_list_t *l, unsigned long rank);
 typedef void (*print_func_t)(skip_list_t *l);
 
 
@@ -171,14 +171,14 @@ struct skip_list {
     element_type_t key_type;
     element_type_t value_type;
     
-    insert_func_t insert_func;
-    find_func_t find_func;
-    remove_func_t remove_func;
+    insert_func_t insert;
+    find_func_t find;
+    remove_func_t remove;
     remove_node_func_t remove_node;
     get_rank_func_t get_rank;
     get_node_rank_func_t get_node_rank;
     get_node_by_rank_func_t get_node_by_rank;
-    print_func_t print_func;
+    print_func_t print;
 };
 
 
@@ -285,10 +285,10 @@ skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
     slist->header = header; \
     slist->key_type = ELEMENT_TYPEID(header->key.KEY_FIELD); \
     slist->value_type = value_type_id; \
-    slist->print_func = &skip_list_print_ ## KEY_FIELD; \
-    slist->insert_func = &skip_list_insert_ ## KEY_FIELD; \
-    slist->find_func = &skip_list_find_ ## KEY_FIELD; \
-    slist->remove_func = &skip_list_remove_ ## KEY_FIELD; \
+    slist->print = &skip_list_print_ ## KEY_FIELD; \
+    slist->insert = &skip_list_insert_ ## KEY_FIELD; \
+    slist->find = &skip_list_find_ ## KEY_FIELD; \
+    slist->remove = &skip_list_remove_ ## KEY_FIELD; \
     slist->remove_node = &skip_list_remove_node_ ## KEY_FIELD; \
     slist->get_rank = &skip_list_get_rank_ ## KEY_FIELD; \
     slist->get_node_rank = &skip_list_get_node_rank_ ## KEY_FIELD; \
@@ -627,7 +627,7 @@ static const skip_list_create_func_t create_func_list[TPTR] = {
     } \
     ELEMENT_FROM(__key__, KEY); \
     ELEMENT_FROM(__value__, VALUE); \
-    list->insert_func(list, __key__, __value__); \
+    list->insert(list, __key__, __value__); \
     }while(0)
 
 
@@ -646,15 +646,15 @@ int main(){
         int32_t n = random() % 100;
         // key.i32 = n;
         // value.i32 = -n;
-        // i32_skiplist->insert_func(i32_skiplist, key, value);
+        // i32_skiplist->insert(i32_skiplist, key, value);
         SKIP_LIST_INSERT(i32_skiplist, n, -n);
     }
 
-    i32_skiplist->print_func(i32_skiplist);
+    i32_skiplist->print(i32_skiplist);
 
     skip_node_t *node;
     key.i32 = 56;
-    node = i32_skiplist->find_func(i32_skiplist, key);
+    node = i32_skiplist->find(i32_skiplist, key);
     if(node != NULL){
         fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
         int rank =skip_list_get_node_rank_i32(i32_skiplist, node);
@@ -664,7 +664,7 @@ int main(){
         fprintf(stderr, "not found\n");
     }
     fprintf(stderr, "TTTTTTTTTTTTTTTT\n");
-    i32_skiplist->print_func(i32_skiplist);
+    i32_skiplist->print(i32_skiplist);
     skip_list_destroy(i32_skiplist);
 
     
@@ -691,10 +691,10 @@ int main(){
     for(int i=0; words[i]!=NULL; i++){
         key.s = words[i];
         value.p = NULL;
-        // str_skiplist->insert_func(str_skiplist, key, value);
+        // str_skiplist->insert(str_skiplist, key, value);
         SKIP_LIST_INSERT(str_skiplist, words[i], NULL);
     }
-    str_skiplist->print_func(str_skiplist);
+    str_skiplist->print(str_skiplist);
     
     {
         int rank =skip_list_get_rank_s(str_skiplist, (element_t)"opera");
@@ -702,7 +702,7 @@ int main(){
     }
     skip_list_remove_s(str_skiplist, (element_t)"opera");
     fprintf(stderr, "xxxxxxxxxxxxxx\n");
-    str_skiplist->print_func(str_skiplist);
+    str_skiplist->print(str_skiplist);
 
     skip_list_destroy(str_skiplist);
 
