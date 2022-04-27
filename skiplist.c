@@ -21,11 +21,9 @@ typedef enum element_type {
     TUINT64,
     TSTR,
     TPTR, //从pointer开始暂时不支持做key
-    TDOUBLE,
+    TDOUBLE, // float 传参时候会转换成double, 所以不支持float
     TUNKNOW
 } element_type_t;
-
-// float 传参时候会转换成double, 所以不支持float
 
 
 char* const element_typename_list[] = {
@@ -43,13 +41,13 @@ typedef union element {
 } element_t;
 
 
-
 #define ELEMENT_TYPEID(x) _Generic((x), \
                             int32_t: TINT32, uint32_t: TUINT32, \
                             int64_t: TINT64, uint64_t: TUINT64, \
                             char*: TSTR, void *: TPTR, \
                             double: TDOUBLE, \
                             default: TUNKNOW )
+
 
 // #define ELEMENT_TYPENAME(x) _Generic((x), \
 //                             int32_t: "i32", uint32_t: "u32", \
@@ -58,9 +56,12 @@ typedef union element {
 //                             char*: "string", void*: "pointer", \
 //                             default: "unknow type" )
 
+
 #define ELEMENT_TYPENAME(x) (element_typename_list[ELEMENT_TYPEID(x)])
 
+
 #define ELEMENT_TYPEIDNAME(typeid) ((typeid) > TUNKNOW? element_typename_list[TUNKNOW] : element_typename_list[(typeid)])
+
 
 #define ELEMENT_FROM(ele, x) \
     do { \
@@ -139,9 +140,12 @@ typedef struct skip_list skip_list_t;
 
 
 typedef skip_node_t* (*insert_func_t)(skip_list_t *l, element_t key, element_t value);
+typedef skip_node_t* (*find_func_t)(skip_list_t *l, element_t key);
 typedef int (*remove_func_t)(skip_list_t *l, element_t key);
 typedef int (*remove_node_func_t)(skip_list_t *l, skip_node_t *node);
-typedef skip_node_t* (*find_func_t)(skip_list_t *l, element_t key);
+typedef unsigned long (*get_rank_func_t)(skip_list_t *l, element_t ele);
+typedef unsigned long (*get_node_rank_func_t)(skip_list_t *l, skip_node_t *node);
+typedef skip_node_t (*get_node_by_rank_func_t)(skip_list_t *l, unsigned long rank);
 typedef void (*print_func_t)(skip_list_t *l);
 
 
@@ -168,9 +172,12 @@ struct skip_list {
     element_type_t value_type;
     
     insert_func_t insert_func;
+    find_func_t find_func;
     remove_func_t remove_func;
     remove_node_func_t remove_node;
-    find_func_t find_func;
+    get_rank_func_t get_rank;
+    get_node_rank_func_t get_node_rank;
+    get_node_by_rank_func_t get_node_by_rank;
     print_func_t print_func;
 };
 
@@ -202,6 +209,41 @@ void skip_list_print_ ## KEY_FIELD(skip_list_t *l){ \
 } \
 
 
+// void skip_list_print(skip_list_t *l){
+//     printf("list count: %lu, level is %d.\n", l->length, l->level);
+//     for(int i=l->level-1; i>=0; i--){
+//         printf("level %d: ", i);
+//         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
+//             printf("%d(v%d)-", cur->key, cur->value);
+//         }
+//         printf("NULL\n");
+//     }
+// }
+
+
+// void skip_list_rank_print(skip_list_t *l){
+//     printf("list count: %lu, level is %d.\n", l->length, l->level);
+//     for(int i=l->level-1; i>=0; i--){
+//         printf("level %d(span%lu): ", i,l->header->level[i].span);
+//         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
+//             printf("%d(span%lu)-", cur->key, cur->level[i].span);
+//         }
+//         printf("NULL\n");
+//     }
+// }
+
+// void skip_list_addr_print(skip_list_t *l){
+//     printf("list count: %lu, level is %d.\n", l->length, l->level);
+//     for(int i=l->level-1; i>=0; i--){
+//         printf("level %d(%p): ", i, l->header);
+//         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
+//             printf("%d(addr%p)-", cur->key, cur);
+//         }
+//         printf("NULL\n");
+//     }
+// }
+
+
 #define DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
 skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, element_t value);
 
@@ -216,6 +258,17 @@ int skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele);
 
 #define DECLARE_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
 int skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node);
+
+
+#define DECLARE_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD) \
+unsigned long skip_list_get_rank_ ## KEY_FIELD(skip_list_t *l, element_t ele);
+
+
+#define DECLARE_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KEY_FIELD) \
+unsigned long skip_list_get_node_rank_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node);
+
+
+skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank);
 
 
 #define DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
@@ -234,9 +287,12 @@ skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
     slist->value_type = value_type_id; \
     slist->print_func = &skip_list_print_ ## KEY_FIELD; \
     slist->insert_func = &skip_list_insert_ ## KEY_FIELD; \
+    slist->find_func = &skip_list_find_ ## KEY_FIELD; \
     slist->remove_func = &skip_list_remove_ ## KEY_FIELD; \
     slist->remove_node = &skip_list_remove_node_ ## KEY_FIELD; \
-    slist->find_func = &skip_list_find_ ## KEY_FIELD; \
+    slist->get_rank = &skip_list_get_rank_ ## KEY_FIELD; \
+    slist->get_node_rank = &skip_list_get_node_rank_ ## KEY_FIELD; \
+    slist->get_node_by_rank = &skip_list_get_node_by_rank; \
     return slist; \
 } \
 
@@ -346,41 +402,6 @@ skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
        return NULL; \
     } \
 } \
-
-
-// void skip_list_print(skip_list_t *l){
-//     printf("list count: %lu, level is %d.\n", l->length, l->level);
-//     for(int i=l->level-1; i>=0; i--){
-//         printf("level %d: ", i);
-//         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
-//             printf("%d(v%d)-", cur->key, cur->value);
-//         }
-//         printf("NULL\n");
-//     }
-// }
-
-
-// void skip_list_rank_print(skip_list_t *l){
-//     printf("list count: %lu, level is %d.\n", l->length, l->level);
-//     for(int i=l->level-1; i>=0; i--){
-//         printf("level %d(span%lu): ", i,l->header->level[i].span);
-//         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
-//             printf("%d(span%lu)-", cur->key, cur->level[i].span);
-//         }
-//         printf("NULL\n");
-//     }
-// }
-
-// void skip_list_addr_print(skip_list_t *l){
-//     printf("list count: %lu, level is %d.\n", l->length, l->level);
-//     for(int i=l->level-1; i>=0; i--){
-//         printf("level %d(%p): ", i, l->header);
-//         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
-//             printf("%d(addr%p)-", cur->key, cur);
-//         }
-//         printf("NULL\n");
-//     }
-// }
 
 
 #define DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
@@ -538,9 +559,11 @@ skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank){
 
 #define DEF_SKIP_LIST(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
+    DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
-    DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
+    DECLARE_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD) \
+    DECLARE_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
