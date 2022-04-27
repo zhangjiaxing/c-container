@@ -719,12 +719,38 @@ unsigned long skip_list_get_rank_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
 //         }
 //     }
 
-//     if(cur != l->header && cur->key == key){
+//     if(cur == node){
 //         return rank;
 //     }else{
 //         return 0;
 //     }
 // }
+
+#define DEF_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KEY_FIELD) \
+unsigned long skip_list_get_node_rank_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node){ \
+    if(node == NULL || node == l->header){ \
+        return ENOENT; \
+    } \
+    unsigned long rank = 0; \
+    skip_node_t *cur = l->header; \
+    for(int i = l->level-1; i >= 0; i--) { \
+        while(cur->level[i].forward != l->header){ \
+            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD , node->key.KEY_FIELD); \
+            if(comp < 0 || (comp == 0 && cur->level[i].forward <= node)){ \
+                rank += cur->level[i].span; \
+                cur = cur->level[i].forward; \
+            }else{ \
+                break; \
+            } \
+        } \
+    } \
+    if(cur == node){ \
+        return rank; \
+    }else{ \
+        return 0; \
+    } \
+}
+
 
 
 // skip_node_t *skip_list_get_by_rank(skip_list_t *l, unsigned long rank){
@@ -745,6 +771,24 @@ unsigned long skip_list_get_rank_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
 // }
 
 
+skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank){
+    unsigned long traversed = 0;
+    skip_node_t *cur = l->header;
+
+    for (int i = l->level-1; i >= 0; i--) {
+        while (cur->level[i].forward && (traversed + cur->level[i].span) <= rank){
+            traversed += cur->level[i].span;
+            cur = cur->level[i].forward;
+        }
+        if (traversed == rank){
+            return cur;
+        }
+    }
+    return NULL;
+}
+
+
+
 #define DEF_SKIP_LIST(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
@@ -757,7 +801,8 @@ unsigned long skip_list_get_rank_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
     DEF_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD)
+    DEF_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD) \
+    DEF_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KEY_FIELD)
 
 
 DEF_SKIP_LIST(int32_t, i32)
@@ -842,7 +887,7 @@ int main(){
     node = i32_skiplist->find_func(i32_skiplist, key);
     if(node != NULL){
         fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
-        int rank =skip_list_get_rank_i32(i32_skiplist, key);
+        int rank =skip_list_get_node_rank_i32(i32_skiplist, node);
         fprintf(stderr, "node rank = %d\n", rank);
         i32_skiplist->remove_node(i32_skiplist, node);
     }else{
