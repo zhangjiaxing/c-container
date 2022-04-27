@@ -51,11 +51,17 @@ typedef union element {
                             double: TDOUBLE, \
                             default: TUNKNOW )
 
+// #define ELEMENT_TYPENAME(x) _Generic((x), \
+//                             int32_t: "i32", uint32_t: "u32", \
+//                             int64_t: "i64", uint64_t: "u64", \
+//                             float: "float", double: "double", \
+//                             char*: "string", void*: "pointer", \
+//                             default: "unknow type" )
+
 #define ELEMENT_TYPENAME(x) (element_typename_list[ELEMENT_TYPEID(x)])
 
 #define ELEMENT_TYPEIDNAME(typeid) ((typeid) > TUNKNOW? element_typename_list[TUNKNOW] : element_typename_list[(typeid)])
 
-//TODO
 #define ELEMENT_FROM(ele, x) \
     do { \
         ele = (element_t)x; \
