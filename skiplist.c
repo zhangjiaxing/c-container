@@ -127,13 +127,13 @@ void print_element_##FIELD(element_t ele){ \
 }
 
 
-DEF_ELEMENT_PRINT(uint32_t, u32, "%lu")
 DEF_ELEMENT_PRINT(int32_t, i32, "%d")
+DEF_ELEMENT_PRINT(uint32_t, u32, "%lu")
 DEF_ELEMENT_PRINT(int64_t, i64, "%lld")
 DEF_ELEMENT_PRINT(uint64_t, u64, "%llu")
-DEF_ELEMENT_PRINT(double, f, "%f")
 DEF_ELEMENT_PRINT(char*, s, "%s")
 DEF_ELEMENT_PRINT(void*, p, "%p")
+DEF_ELEMENT_PRINT(double, f, "%f")
 
 
 typedef struct skip_node skip_node_t;
@@ -179,7 +179,6 @@ struct skip_list {
     get_rank_func_t get_rank;
     get_node_rank_func_t get_node_rank;
     get_node_by_rank_func_t get_node_by_rank;
-    print_func_t print;
 };
 
 
@@ -196,53 +195,73 @@ void skip_node_destroy(skip_node_t *node){
     free(node);
 }
 
-#define DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD) \
-void skip_list_print_ ## KEY_FIELD(skip_list_t *l){ \
-    printf("\nskiplist: count %d\n", l->length); \
-    for(int i=l->level-1; i>=0; i--){ \
-        printf("level %d(span%lu): ", i,l->header->level[i].span); \
-        for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){ \
-            print_element_##KEY_FIELD(cur->key); \
-            printf("(span%d)-", cur->level[i].span); \
-        } \
-        printf("NULL\n"); \
-    } \
-} \
+
+typedef void (*print_element_func_t)(element_t ele);
 
 
-// void skip_list_print(skip_list_t *l){
-//     printf("list count: %lu, level is %d.\n", l->length, l->level);
-//     for(int i=l->level-1; i>=0; i--){
-//         printf("level %d: ", i);
-//         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
-//             printf("%d(v%d)-", cur->key, cur->value);
-//         }
-//         printf("NULL\n");
-//     }
+static const print_element_func_t print_element_func_list[TDOUBLE+1] = {
+    &print_element_i32,
+    &print_element_u32,
+    &print_element_i64,
+    &print_element_u64,
+    &print_element_s,
+    &print_element_p,
+    &print_element_f
+};
+
+
+// #define DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD) \
+// void skip_list_print_ ## KEY_FIELD(skip_list_t *l){ \
+//     printf("\nskiplist: count %d\n", l->length); \
+//     for(int i=l->level-1; i>=0; i--){ \
+//         printf("level %d(span%lu): ", i,l->header->level[i].span); \
+//         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){ \
+//             print_element_##KEY_FIELD(cur->key); \
+//             printf("(span%d)-", cur->level[i].span); \
+//         } \
+//         printf("NULL\n"); \
+//     } \
 // }
 
 
-// void skip_list_rank_print(skip_list_t *l){
-//     printf("list count: %lu, level is %d.\n", l->length, l->level);
-//     for(int i=l->level-1; i>=0; i--){
-//         printf("level %d(span%lu): ", i,l->header->level[i].span);
-//         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
-//             printf("%d(span%lu)-", cur->key, cur->level[i].span);
-//         }
-//         printf("NULL\n");
-//     }
-// }
+void skip_list_print(skip_list_t *l){
+    printf("list count: %lu, level is %d.\n", l->length, l->level);
+    for(int i=l->level-1; i>=0; i--){
+        printf("level %d: ", i);
+        for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
+            print_element_func_list[l->key_type](cur->key);
+            printf("(v");
+            print_element_func_list[l->value_type](cur->value);
+            printf(")-");
+        }
+        printf("NULL\n");
+    }
+}
 
-// void skip_list_addr_print(skip_list_t *l){
-//     printf("list count: %lu, level is %d.\n", l->length, l->level);
-//     for(int i=l->level-1; i>=0; i--){
-//         printf("level %d(%p): ", i, l->header);
-//         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
-//             printf("%d(addr%p)-", cur->key, cur);
-//         }
-//         printf("NULL\n");
-//     }
-// }
+
+void skip_list_rank_print(skip_list_t *l){
+    printf("list count: %lu, level is %d.\n", l->length, l->level);
+    for(int i=l->level-1; i>=0; i--){
+        printf("level %d(span%lu): ", i,l->header->level[i].span);
+        for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
+            print_element_func_list[l->key_type](cur->key);
+            printf("(span%lu)-", cur->level[i].span);
+        }
+        printf("NULL\n");
+    }
+}
+
+void skip_list_addr_print(skip_list_t *l){
+    printf("list count: %lu, level is %d.\n", l->length, l->level);
+    for(int i=l->level-1; i>=0; i--){
+        printf("level %d(%p): ", i, l->header);
+        for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
+            print_element_func_list[l->key_type](cur->key);
+            printf("(addr%p)-", cur);
+        }
+        printf("NULL\n");
+    }
+}
 
 
 #define DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
@@ -286,7 +305,6 @@ skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
     slist->header = header; \
     slist->key_type = ELEMENT_TYPEID(header->key.KEY_FIELD); \
     slist->value_type = value_type_id; \
-    slist->print = &skip_list_print_ ## KEY_FIELD; \
     slist->insert = &skip_list_insert_ ## KEY_FIELD; \
     slist->find = &skip_list_find_ ## KEY_FIELD; \
     slist->remove = &skip_list_remove_ ## KEY_FIELD; \
@@ -566,7 +584,6 @@ skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank){
     DECLARE_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
@@ -585,7 +602,7 @@ DEF_SKIP_LIST(char *, s)
 
 typedef skip_list_t* (*skip_list_create_func_t)(element_type_t value_type_id);
 
-static const skip_list_create_func_t create_func_list[TPTR] = {
+static const skip_list_create_func_t create_func_list[TSTR+1] = {
     skip_list_create_i32,
     skip_list_create_u32,
     skip_list_create_i64,
@@ -651,7 +668,8 @@ int main(){
         SKIP_LIST_INSERT(i32_skiplist, n, -n);
     }
 
-    i32_skiplist->print(i32_skiplist);
+    // i32_skiplist->print(i32_skiplist);
+    skip_list_addr_print(i32_skiplist);
 
     skip_node_t *node;
     key.i32 = 56;
@@ -665,7 +683,7 @@ int main(){
         fprintf(stderr, "not found\n");
     }
     fprintf(stderr, "TTTTTTTTTTTTTTTT\n");
-    i32_skiplist->print(i32_skiplist);
+    // i32_skiplist->print(i32_skiplist);
     skip_list_destroy(i32_skiplist);
 
     
@@ -695,7 +713,6 @@ int main(){
         // str_skiplist->insert(str_skiplist, key, value);
         SKIP_LIST_INSERT(str_skiplist, words[i], NULL);
     }
-    str_skiplist->print(str_skiplist);
     
     {
         int rank =skip_list_get_rank_s(str_skiplist, (element_t)"opera");
@@ -703,7 +720,7 @@ int main(){
     }
     skip_list_remove_s(str_skiplist, (element_t)"opera");
     fprintf(stderr, "xxxxxxxxxxxxxx\n");
-    str_skiplist->print(str_skiplist);
+    skip_list_print(str_skiplist);
 
     skip_list_destroy(str_skiplist);
 
