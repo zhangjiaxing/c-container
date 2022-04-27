@@ -676,6 +676,33 @@ int skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node){ \
 // }
 
 
+#define DEF_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD) \
+unsigned long skip_list_get_rank_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
+    unsigned long rank = 0; \
+    skip_node_t *cur = l->header; \
+    for (int i = l->level-1; i >= 0; i--) { \
+        while(cur->level[i].forward != l->header){ \
+            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD , ele.KEY_FIELD); \
+            if(comp < 0){ \
+                rank += cur->level[i].span; \
+                cur = cur->level[i].forward; \
+            }else{ \
+                break; \
+            } \
+        } \
+    } \
+    rank += cur->level[0].span; \
+    cur = cur->level[0].forward; \
+    if(cur != l->header && element_compare_##KEY_FIELD(cur->key.KEY_FIELD, ele.KEY_FIELD) == 0){ \
+        return rank; \
+    }else{ \
+        return 0; \
+    } \
+}
+
+
+
+
 // unsigned long skip_list_get_node_rank(skip_list_t *l, skip_node_t *node){
 //     // if(node == NULL || node == l->header){
 //     //     return ENOENT;
@@ -729,7 +756,8 @@ int skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node){ \
     DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD)
+    DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
+    DEF_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD)
 
 
 DEF_SKIP_LIST(int32_t, i32)
@@ -814,6 +842,8 @@ int main(){
     node = i32_skiplist->find_func(i32_skiplist, key);
     if(node != NULL){
         fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
+        int rank =skip_list_get_rank_i32(i32_skiplist, key);
+        fprintf(stderr, "node rank = %d\n", rank);
         i32_skiplist->remove_node(i32_skiplist, node);
     }else{
         fprintf(stderr, "not found\n");
@@ -850,6 +880,11 @@ int main(){
         SKIP_LIST_INSERT(str_skiplist, words[i], NULL);
     }
     str_skiplist->print_func(str_skiplist);
+    
+    {
+        int rank =skip_list_get_rank_s(str_skiplist, (element_t)"opera");
+        fprintf(stderr, "opera node rank = %d\n", rank);
+    }
     skip_list_remove_s(str_skiplist, (element_t)"opera");
     fprintf(stderr, "xxxxxxxxxxxxxx\n");
     str_skiplist->print_func(str_skiplist);
