@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
@@ -20,7 +21,7 @@ typedef enum element_type {
     TINT64,
     TUINT64,
     TSTR,
-    TPTR, //从pointer开始暂时不支持做key
+    TPTR, //从指针开始暂时不支持做key
     TDOUBLE, // float 传参时候会转换成double, 所以不支持float
     TUNKNOW
 } element_type_t;
@@ -141,8 +142,8 @@ typedef struct skip_list skip_list_t;
 
 typedef skip_node_t* (*insert_func_t)(skip_list_t *l, element_t key, element_t value);
 typedef skip_node_t* (*find_func_t)(skip_list_t *l, element_t key);
-typedef int (*remove_func_t)(skip_list_t *l, element_t key);
-typedef int (*remove_node_func_t)(skip_list_t *l, skip_node_t *node);
+typedef bool (*remove_func_t)(skip_list_t *l, element_t key);
+typedef bool (*remove_node_func_t)(skip_list_t *l, skip_node_t *node);
 typedef unsigned long (*get_rank_func_t)(skip_list_t *l, element_t ele);
 typedef unsigned long (*get_node_rank_func_t)(skip_list_t *l, skip_node_t *node);
 typedef skip_node_t* (*get_node_by_rank_func_t)(skip_list_t *l, unsigned long rank);
@@ -253,11 +254,11 @@ skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele);
 
 
 #define DECLARE_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
-int skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele);
+bool skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele);
 
 
 #define DECLARE_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
-int skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node);
+bool skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node);
 
 
 #define DECLARE_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD) \
@@ -405,7 +406,7 @@ skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
 
 
 #define DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
-int skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
+bool skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
     KEY_TYPE key = ele.KEY_FIELD;  \
     skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
     skip_node_t *cur = l->header; \
@@ -422,7 +423,7 @@ int skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
     } \
     cur = cur->level[0].forward; \
     if(cur == l->header || element_compare_##KEY_FIELD(cur->key.KEY_FIELD, key) != 0){ \
-        return ENOENT; \
+        return false;\
     } \
     for(int i=l->level-1; i>=0 ; i--){ \
         skip_node_t *prev = update[i]; \
@@ -440,14 +441,14 @@ int skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
     while(l->level>1 && l->header->level[l->level-1].forward == l->header){ \
         l->level--; \
     } \
-    return 0; \
+    return true; \
 }
 
 
 #define DEF_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
-int skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node){ \
+bool skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node){ \
     if(node == NULL || node == l->header){ \
-        return ENOENT; \
+        return false; \
     } \
     element_t ele = node->key; \
     skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
@@ -465,7 +466,7 @@ int skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node){ \
     } \
     cur = cur->level[0].forward; \
     if(cur == l->header || cur != node){ \
-        return ENOENT; \
+        return false; \
     } \
     skip_node_t *prev; \
     for(int i=l->level-1; i>=0 ; i--){ \
@@ -484,7 +485,7 @@ int skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node){ \
     while(l->level>1 && l->header->level[l->level-1].forward == l->header){ \
         l->level--; \
     } \
-    return 0; \
+    return true; \
 }
 
 
