@@ -67,60 +67,22 @@ typedef union element {
 #define ELEMENT_TYPEIDNAME(typeid) ((typeid) > TUNKNOW? element_typename_list[TUNKNOW] : element_typename_list[(typeid)])
 
 
-#define ELEMENT_FROM(ele, x) \
-    do { \
-        ele = (element_t)x; \
-    } while(0)
-
-    // do { \
-    //     element_type_t __type_id__ = ELEMENT_TYPEID(x); \
-    //     switch (__type_id__) \
-    //     { \
-    //     case TINT32: \
-    //         (ele).i32 = (int32_t)(x); \
-    //         break; \
-    //     case TUINT32: \
-    //         (ele).u32 = (uint32_t)(x); \
-    //         break; \
-    //     case TINT64: \
-    //         (ele).i64 = (int64_t)(x); \
-    //         break; \
-    //     case TUINT64: \
-    //         (ele).u64 = (uint64_t)(x); \
-    //         break; \
-    //     case TSTR: \
-    //         (ele).s = (char *)(x); \
-    //         break; \
-    //     case TPTR: \
-    //         (ele).p = (void *)(x); \
-    //         break; \
-    //     case TDOUBLE: \
-    //         (ele).f = (double)(x); \
-    //         break; \
-    //     default: \
-    //         fprintf(stderr, "%s: line %d ELEMENT_FROM type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__type_id__)); \
-    //         _Exit(1); \
-    //         break; \
-    //     } \
-    // }while(0)
+#define skip_list_foreach(node, l) \
+        for ((node) = (l)->header->level[0].forward; (node)!=(l)->header; (node)=(node)->level[0].forward)
 
 
-// #define skip_list_foreach(node, l) \
-//         for ((node) = (l)->header->level[0].forward; (node)!=(l)->header; (node)=(node)->level[0].forward)
+#define skip_list_foreach_safe(node, l) \
+        (node) = (l)->header->level[0].forward; \
+        for (skip_node_t *tMp__=(node)->level[0].forward; (node)!=(l)->header; (node)=tMp__, tMp__=(node)->level[0].forward)
 
 
-// #define skip_list_foreach_safe(node, l) \
-//         (node) = (l)->header->level[0].forward; \
-//         for (skip_node_t *tMp__=(node)->level[0].forward; (node)!=(l)->header; (node)=tMp__, tMp__=(node)->level[0].forward)
+#define skip_list_foreach_reverse(node, l) \
+        for ((node) = (l)->header->backward; node!=(l)->header; (node)=(node)->backward)
 
 
-// #define skip_list_foreach_reverse(node, l) \
-//         for ((node) = (l)->header->backward; node!=(l)->header; (node)=(node)->backward)
-
-
-// #define skip_list_foreach_reverse_safe(node, l) \
-//         (node) = (l)->header->backward; \
-//         for (skip_node_t *tMp__=(node)->backward; (node)!=(l)->header; (node)=tMp__, tMp__=(node)->backward)
+#define skip_list_foreach_reverse_safe(node, l) \
+        (node) = (l)->header->backward; \
+        for (skip_node_t *tMp__=(node)->backward; (node)!=(l)->header; (node)=tMp__, tMp__=(node)->backward)
 
 
 //    printf(PRINTF_FMT "-", ele.FIELD);
@@ -631,12 +593,10 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
 })
 
 
-#define SKIP_LIST_DESTROY(list) (skip_list_destroy(list))
+#define SKIP_LIST_DESTROY(list) do{ skip_list_destroy(list); (list)=NULL; } while(0)
 
 
 #define SKIP_LIST_INSERT(list, key, value) ({ \
-    element_t __key__; \
-    element_t __value__; \
     element_type_t __key_type__ = ELEMENT_TYPEID(key); \
     element_type_t __value_type__ = ELEMENT_TYPEID(value); \
     if(__key_type__ != (list)->key_type){ \
@@ -647,9 +607,7 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
         fprintf(stderr, "%s: line %d value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
         _Exit(1); \
     } \
-    ELEMENT_FROM(__key__, key); \
-    ELEMENT_FROM(__value__, value); \
-    (list)->insert(list, __key__, __value__); \
+    (list)->insert((list), (element_t)(key), (element_t)(value)); \
 })
 
 
@@ -740,6 +698,28 @@ int main(){
     SKIP_LIST_DESTROY(i32_skiplist);
 
     fprintf(stderr, "=================================\n");
+
+    int *data = malloc(sizeof(int) * 1 * M);
+    for(int i=0; i<1*M; i++){
+        data[i] = rand();
+    }
+
+    {
+        clock_t t1 = clock();
+        i32_skiplist = SKIP_LIST_CREATE(int32_t, int32_t);
+        for(int i=0; i<1*M; i++){
+            i32_skiplist->insert(i32_skiplist, (element_t)data[i], (element_t)0);
+        }
+        clock_t t2 = clock();
+
+        printf("time : %f s\n", ((double)(t2-t1))/CLOCKS_PER_SEC);
+    }
+
+
+    // skip_list_t *double_skiplist;
+    // double_skiplist = SKIP_LIST_CREATE(double, int32_t);
+
+    fprintf(stderr, "=================================\n");
     
     static char * const words[] = {
         "firefox",
@@ -769,79 +749,43 @@ int main(){
         int rank = SKIP_LIST_GET_RANK(str_skiplist, ((char *)"opera"));
         fprintf(stderr, "opera node rank = %d\n", rank);
     }
-    skip_list_remove_s(str_skiplist, (element_t)"opera");
-    fprintf(stderr, "xxxxxxxxxxxxxx\n");
+    SKIP_LIST_REMOVE(str_skiplist, "opera");
     skip_list_print(str_skiplist);
+    // SKIP_LIST_DESTROY(str_skiplist);
 
-    skip_list_destroy(str_skiplist);
+
+    fprintf(stderr, "\n=========== test reverse\n");
+    skip_list_foreach_reverse(node, str_skiplist) {
+        fprintf(stderr, "%s-", node->key.s);
+    }
+    fprintf(stderr, "\n\n");
 
 
-    // int *data = malloc(sizeof(int) * 10 * M);
-    // for(int i=0; i<10*M; i++){
-    //     data[i] = rand();
-    // }
-
-    {
-        clock_t t1 = clock();
-        i32_skiplist = SKIP_LIST_CREATE(int32_t, int32_t);
-        for(int i=0; i<10*M; i++){
-            i32_skiplist->insert(i32_skiplist, (element_t)i, (element_t)0);
+    fprintf(stderr, "test skip_list_for_each_reverse_safe\n");
+    skip_list_foreach_reverse_safe(node, str_skiplist){
+        if(strcmp(node->key.s, "chrome") == 0){
+            bool ret = SKIP_LIST_REMOVE_NODE(str_skiplist, node);
+            fprintf(stderr, "delete node %p (%s): \n", node, ret == true? "ok": "failed");
         }
-        clock_t t2 = clock();
+    }
+    
+    fprintf(stderr, "\n");
+    skip_list_rank_print(str_skiplist);
+    fprintf(stderr, "\n");
 
-        printf("time : %f s\n", ((double)(t2-t1))/CLOCKS_PER_SEC);
+    printf("SKIP_LIST_GET_RANK(\"firefox\") == %lu\n", SKIP_LIST_GET_RANK(str_skiplist, "firefox"));
 
+    // node = SKIP_LIST_FIND_NODE(str_skiplist, "firefox");
+    // int rank = SKIP_LIST_GET_NODE_RANK(str_skiplist, node);
+    printf("SKIP_LIST_GET_NODE_RANK(SKIP_LIST_GET_NODE_BY_RANK(\"firefox\")) == %d \n", SKIP_LIST_GET_NODE_RANK(str_skiplist, SKIP_LIST_FIND_NODE(str_skiplist, "firefox")));
+
+
+    fprintf(stderr, "test skip_list_for_each_safe\n");
+    skip_list_foreach_safe(node, str_skiplist){
+        fprintf(stderr, "%s-", node->key.s);
     }
 
-
-    // skip_list_t *double_skiplist;
-    // SKIP_LIST_CREATE(double, int32_t, double_skiplist);
-
-
-    // skip_list_rank_print(sl);
-    // skip_list_addr_print(sl);
-
-
-    // int delete_ele[] = {11,22,33,3,3,3,5,7,7,7,19,19,-1};
-    // for(int i=0; delete_ele[i]!=-1; i++){
-    //     int ret = skip_list_remove(sl, delete_ele[i]);
-    //     fprintf(stderr, "remove: %d %s\n", delete_ele[i], ret==0?"success":"failed");
-    // }
-    // fprintf(stderr, "skiplist count is %lu, level is %d.\n", sl->length, sl->level);
-
-
-
-    // fprintf(stderr, "==== test print\n");
-    // skip_list_rank_print(sl);
-    // skip_list_addr_print(sl);
-
-    // fprintf(stderr, "==== test reverse\n");
-    // skip_list_foreach_reverse(node, sl) {
-    //     fprintf(stderr, "%d-", node->key);
-    // }
-    // fprintf(stderr, "\n\n");
-
-
-    // fprintf(stderr, "test skip_list_for_each_reverse_safe\n");
-    // skip_list_foreach_reverse_safe(node, sl){
-    //     if(node->key == 6){
-    //         int ret = skip_list_remove_node(sl, node);
-    //         fprintf(stderr, "delete node %p key 6 : %s\n", node, ret == 0? "ok": "failed");
-    //     }
-    // }
-    // skip_list_rank_print(sl);
-
-    // printf("skip_list_get_rank(17) == %d \n", skip_list_get_rank(sl, 17));
-
-    // printf("skip_list_get_node_rank(17) == %d \n", skip_list_get_node_rank(sl, skip_list_find(sl, 17)));
-
-    // printf("skip_list_get_by_rank(15).value == %d \n", skip_list_get_by_rank(sl, 15)->value);
-
-
-    // fprintf(stderr, "test skip_list_for_each_safe\n");
-    // skip_list_foreach_safe(node, sl){
-    //     fprintf(stderr, "%d-", node->key);
-    // }
+    SKIP_LIST_DESTROY(str_skiplist);
 
     return 0;
 }
