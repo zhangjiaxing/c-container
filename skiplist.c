@@ -634,11 +634,11 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
 #define SKIP_LIST_DESTROY(list) (skip_list_destroy(list))
 
 
-#define SKIP_LIST_INSERT(list, KEY, VALUE) ({ \
+#define SKIP_LIST_INSERT(list, key, value) ({ \
     element_t __key__; \
     element_t __value__; \
-    element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
-    element_type_t __value_type__ = ELEMENT_TYPEID(VALUE); \
+    element_type_t __key_type__ = ELEMENT_TYPEID(key); \
+    element_type_t __value_type__ = ELEMENT_TYPEID(value); \
     if(__key_type__ != (list)->key_type){ \
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
@@ -647,14 +647,14 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
         fprintf(stderr, "%s: line %d value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
         _Exit(1); \
     } \
-    ELEMENT_FROM(__key__, KEY); \
-    ELEMENT_FROM(__value__, VALUE); \
+    ELEMENT_FROM(__key__, key); \
+    ELEMENT_FROM(__value__, value); \
     (list)->insert(list, __key__, __value__); \
 })
 
 
-#define SKIP_LIST_FIND_NODE(list, KEY) ({ \
-    element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
+#define SKIP_LIST_FIND_NODE(list, key) ({ \
+    element_type_t __key_type__ = ELEMENT_TYPEID(key); \
     if(__key_type__ != (list)->key_type){ \
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
@@ -663,8 +663,8 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
 })
 
 
-#define SKIP_LIST_FIND(list, KEY) ({ \
-    element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
+#define SKIP_LIST_FIND(list, key) ({ \
+    element_type_t __key_type__ = ELEMENT_TYPEID(key); \
     if(__key_type__ != (list)->key_type){ \
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
@@ -674,13 +674,13 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
 })
 
 
-#define SKIP_LIST_REMOVE(list, KEY) ({ \
-    element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
+#define SKIP_LIST_REMOVE(list, key) ({ \
+    element_type_t __key_type__ = ELEMENT_TYPEID(key); \
     if(__key_type__ != (list)->key_type){ \
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
-    (list)->remove((list), (element_t)KEY); \
+    (list)->remove((list), (element_t)key); \
 })
 
 
