@@ -12,7 +12,7 @@
 
 #include <time.h>
 
-
+// #define NDEBUG
 
 #define SKIPLIST_MAXLEVEL 32 /* Should be enough for 2^64 elements */
 #define SKIPLIST_P 0.25      /* Skiplist P = 1/4 */
@@ -593,8 +593,7 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
 })
 
 
-#define SKIP_LIST_DESTROY(list) do{ skip_list_destroy(list); (list)=NULL; } while(0)
-
+#ifndef NDEBUG
 
 #define SKIP_LIST_INSERT(list, key, value) ({ \
     element_type_t __key_type__ = ELEMENT_TYPEID(key); \
@@ -642,11 +641,6 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
 })
 
 
-#define SKIP_LIST_REMOVE_NODE(list, node) ({ \
-    (list)->remove_node((list), node); \
-})
-
-
 #define SKIP_LIST_GET_RANK(list, key) ({ \
     element_type_t __key_type__ = ELEMENT_TYPEID(key); \
     if(__key_type__ != (list)->key_type){ \
@@ -655,6 +649,30 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
     } \
     (list)->get_rank((list), (element_t)key); \
 })
+
+#else
+
+#define SKIP_LIST_INSERT(list, key, value) ((list)->insert((list), (element_t)(key), (element_t)(value)))
+
+
+#define SKIP_LIST_FIND_NODE(list, key) ((list)->find((list), (element_t)key))
+
+
+#define SKIP_LIST_FIND(list, key) ((list)->find((list), (element_t)key)->value)
+
+
+#define SKIP_LIST_REMOVE(list, key) ((list)->remove((list), (element_t)key))
+
+
+#define SKIP_LIST_GET_RANK(list, key) ((list)->get_rank((list), (element_t)key))
+
+#endif //NDEBUG
+
+
+#define SKIP_LIST_DESTROY(list) do{ skip_list_destroy(list); (list)=NULL; } while(0)
+
+
+#define SKIP_LIST_REMOVE_NODE(list, node) ((list)->remove_node((list), node))
 
 
 #define SKIP_LIST_GET_NODE_RANK(list, node) ((list)->get_node_rank((list), node))
@@ -699,15 +717,15 @@ int main(){
 
     fprintf(stderr, "=================================\n");
 
-    int *data = malloc(sizeof(int) * 1 * M);
-    for(int i=0; i<1*M; i++){
+    int *data = malloc(sizeof(int) * 10 * M);
+    for(int i=0; i<10*M; i++){
         data[i] = rand();
     }
 
     {
         clock_t t1 = clock();
         i32_skiplist = SKIP_LIST_CREATE(int32_t, int32_t);
-        for(int i=0; i<1*M; i++){
+        for(int i=0; i<10*M; i++){
             i32_skiplist->insert(i32_skiplist, (element_t)data[i], (element_t)0);
         }
         clock_t t2 = clock();
