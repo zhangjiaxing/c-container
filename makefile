@@ -1,7 +1,7 @@
 all: skiplist
 .PHONY: all
 
-ranklist: skiplist.c
+skiplist: skiplist.c test.c
 	$(CC) $^ -o $@ 
 
 clean:
