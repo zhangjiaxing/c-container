@@ -10,6 +10,9 @@
 #include <limits.h>
 #include <errno.h>
 
+#include <time.h>
+
+
 
 #define SKIPLIST_MAXLEVEL 32 /* Should be enough for 2^64 elements */
 #define SKIPLIST_P 0.25      /* Skiplist P = 1/4 */
@@ -328,7 +331,7 @@ void skip_list_destroy(skip_list_t *l){
 static int random_level(void) {
     static const int threshold = SKIPLIST_P*RAND_MAX;
     int level = 1;
-    while (random() < threshold)
+    while (rand() < threshold)
         level += 1;
     return (level<SKIPLIST_MAXLEVEL) ? level : SKIPLIST_MAXLEVEL;
 }
@@ -611,42 +614,86 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
 };
 
 
-#define SKIP_LIST_CREATE(list, KEY_TYPE, VALUE_TYPE) \
-    do { \
+#define SKIP_LIST_CREATE(KEY_TYPE, VALUE_TYPE) \
+    ({ \
     KEY_TYPE __key__; \
     VALUE_TYPE __value__; \
     element_type_t __key_type__ = ELEMENT_TYPEID(__key__); \
     element_type_t __value_type__ = ELEMENT_TYPEID(__value__); \
     if(__key_type__ > TSTR){ \
-        fprintf(stderr, "%s: line %d SKIP_LIST_CREATE key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
+        fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
     if(__value_type__ > TDOUBLE){ \
-        fprintf(stderr, "%s: line %d SKIP_LIST_CREATE value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
+        fprintf(stderr, "%s: line %d value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
         _Exit(1); \
     } \
-    list = create_func_list[__key_type__](__value_type__); \
-    } while(0)
+    create_func_list[__key_type__](__value_type__); \
+    })
+
+
+#define SKIP_LIST_DESTROY(list) skip_list_destroy(list)
 
 
 #define SKIP_LIST_INSERT(list, KEY, VALUE) \
-    do { \
+    ({ \
     element_t __key__; \
     element_t __value__; \
     element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
     element_type_t __value_type__ = ELEMENT_TYPEID(VALUE); \
-    if(__key_type__ != list->key_type){ \
-        fprintf(stderr, "%s: line %d SKIP_LIST_INSERT key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
+    if(__key_type__ != (list)->key_type){ \
+        fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
-    if(__value_type__ != list->value_type){ \
-        fprintf(stderr, "%s: line %d SKIP_LIST_INSERT value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
+    if(__value_type__ != (list)->value_type){ \
+        fprintf(stderr, "%s: line %d value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
         _Exit(1); \
     } \
     ELEMENT_FROM(__key__, KEY); \
     ELEMENT_FROM(__value__, VALUE); \
-    list->insert(list, __key__, __value__); \
-    }while(0)
+    (list)->insert(list, __key__, __value__); \
+    })
+
+
+#define SKIP_LIST_FIND_NODE(list, KEY) \
+    ({ \
+    element_t __key__; \
+    element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
+    if(__key_type__ != (list)->key_type){ \
+        fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
+        _Exit(1); \
+    } \
+    (list)->find((list), (element_t)key); \
+    })
+
+
+#define SKIP_LIST_FIND(list, KEY) ({ \
+    element_t __key__; \
+    element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
+    if(__key_type__ != (list)->key_type){ \
+        fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
+        _Exit(1); \
+    } \
+    skip_node_t *node = (list)->find((list), (element_t)key); \
+    node->value; \
+})
+
+
+#define SKIP_LIST_REMOVE(list, KEY) ({ \
+    element_t __key__; \
+    element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
+    if(__key_type__ != (list)->key_type){ \
+        fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
+        _Exit(1); \
+    } \
+    (list)->remove((list), (element_t)KEY); \
+})
+
+
+#define SKIP_LIST_REMOVE_NODE(list, node) ({ \
+    (list)->remove_node((list), node); \
+})
+
 
 
 #define K 1000
@@ -655,16 +702,16 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
 
 int main(){
     skip_list_t *i32_skiplist;
-    SKIP_LIST_CREATE(i32_skiplist, int32_t, int32_t);
+    i32_skiplist = SKIP_LIST_CREATE(int32_t, int32_t);
 
     element_t key;
     element_t value;
     int num_list[20];
     for(int i=0; i<20; i++){
-        int32_t n = random() % 100;
+        int32_t n = rand() % 100;
         // key.i32 = n;
         // value.i32 = -n;
-        // i32_skiplist->insert(i32_skiplist, key, value);
+        // i32_skiplist->insert(i32_skiplist, key, value, NULL);
         SKIP_LIST_INSERT(i32_skiplist, n, -n);
     }
 
@@ -673,18 +720,18 @@ int main(){
 
     skip_node_t *node;
     key.i32 = 56;
-    node = i32_skiplist->find(i32_skiplist, key);
+    node = SKIP_LIST_FIND_NODE(i32_skiplist, key.i32);
     if(node != NULL){
         fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
         int rank =skip_list_get_node_rank_i32(i32_skiplist, node);
         fprintf(stderr, "node rank = %d\n", rank);
-        i32_skiplist->remove_node(i32_skiplist, node);
+        SKIP_LIST_REMOVE_NODE(i32_skiplist, node);
     }else{
         fprintf(stderr, "not found\n");
     }
     fprintf(stderr, "TTTTTTTTTTTTTTTT\n");
     // i32_skiplist->print(i32_skiplist);
-    skip_list_destroy(i32_skiplist);
+    SKIP_LIST_DESTROY(i32_skiplist);
 
     
     static char * const words[] = {
@@ -705,7 +752,7 @@ int main(){
     };
 
     skip_list_t *str_skiplist;
-    SKIP_LIST_CREATE(str_skiplist,  char *, void *);
+    str_skiplist = SKIP_LIST_CREATE(char *, void *);
 
     for(int i=0; words[i]!=NULL; i++){
         key.s = words[i];
@@ -724,8 +771,27 @@ int main(){
 
     skip_list_destroy(str_skiplist);
 
-    skip_list_t *double_skiplist;
-    SKIP_LIST_CREATE(double_skiplist, double, int32_t);
+
+    // int *data = malloc(sizeof(int) * 10 * M);
+    // for(int i=0; i<10*M; i++){
+    //     data[i] = rand();
+    // }
+
+    {
+        clock_t t1 = clock();
+        i32_skiplist = SKIP_LIST_CREATE(int32_t, int32_t);
+        for(int i=0; i<10*M; i++){
+            i32_skiplist->insert(i32_skiplist, (element_t)i, (element_t)0);
+        }
+        clock_t t2 = clock();
+
+        printf("time : %f s\n", ((double)(t2-t1))/CLOCKS_PER_SEC);
+
+    }
+
+
+    // skip_list_t *double_skiplist;
+    // SKIP_LIST_CREATE(double, int32_t, double_skiplist);
 
 
     // skip_list_rank_print(sl);
