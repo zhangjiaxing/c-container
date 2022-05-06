@@ -614,8 +614,7 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
 };
 
 
-#define SKIP_LIST_CREATE(KEY_TYPE, VALUE_TYPE) \
-    ({ \
+#define SKIP_LIST_CREATE(KEY_TYPE, VALUE_TYPE) ({ \
     KEY_TYPE __key__; \
     VALUE_TYPE __value__; \
     element_type_t __key_type__ = ELEMENT_TYPEID(__key__); \
@@ -629,14 +628,13 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
         _Exit(1); \
     } \
     create_func_list[__key_type__](__value_type__); \
-    })
+})
 
 
-#define SKIP_LIST_DESTROY(list) skip_list_destroy(list)
+#define SKIP_LIST_DESTROY(list) (skip_list_destroy(list))
 
 
-#define SKIP_LIST_INSERT(list, KEY, VALUE) \
-    ({ \
+#define SKIP_LIST_INSERT(list, KEY, VALUE) ({ \
     element_t __key__; \
     element_t __value__; \
     element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
@@ -652,23 +650,20 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
     ELEMENT_FROM(__key__, KEY); \
     ELEMENT_FROM(__value__, VALUE); \
     (list)->insert(list, __key__, __value__); \
-    })
+})
 
 
-#define SKIP_LIST_FIND_NODE(list, KEY) \
-    ({ \
-    element_t __key__; \
+#define SKIP_LIST_FIND_NODE(list, KEY) ({ \
     element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
     if(__key_type__ != (list)->key_type){ \
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
     (list)->find((list), (element_t)key); \
-    })
+})
 
 
 #define SKIP_LIST_FIND(list, KEY) ({ \
-    element_t __key__; \
     element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
     if(__key_type__ != (list)->key_type){ \
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
@@ -680,7 +675,6 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
 
 
 #define SKIP_LIST_REMOVE(list, KEY) ({ \
-    element_t __key__; \
     element_type_t __key_type__ = ELEMENT_TYPEID(KEY); \
     if(__key_type__ != (list)->key_type){ \
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
@@ -693,6 +687,22 @@ static const skip_list_create_func_t create_func_list[TSTR+1] = {
 #define SKIP_LIST_REMOVE_NODE(list, node) ({ \
     (list)->remove_node((list), node); \
 })
+
+
+#define SKIP_LIST_GET_RANK(list, key) ({ \
+    element_type_t __key_type__ = ELEMENT_TYPEID(key); \
+    if(__key_type__ != (list)->key_type){ \
+        fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
+        _Exit(1); \
+    } \
+    (list)->get_rank((list), (element_t)key); \
+})
+
+
+#define SKIP_LIST_GET_NODE_RANK(list, node) ((list)->get_node_rank((list), node))
+
+
+#define SKIP_LIST_GET_NODE_BY_RANK(list, rank) (skip_list_get_node_by_rank((list), (rank)))
 
 
 
@@ -709,13 +719,9 @@ int main(){
     int num_list[20];
     for(int i=0; i<20; i++){
         int32_t n = rand() % 100;
-        // key.i32 = n;
-        // value.i32 = -n;
-        // i32_skiplist->insert(i32_skiplist, key, value, NULL);
         SKIP_LIST_INSERT(i32_skiplist, n, -n);
     }
 
-    // i32_skiplist->print(i32_skiplist);
     skip_list_addr_print(i32_skiplist);
 
     skip_node_t *node;
@@ -723,16 +729,17 @@ int main(){
     node = SKIP_LIST_FIND_NODE(i32_skiplist, key.i32);
     if(node != NULL){
         fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
-        int rank =skip_list_get_node_rank_i32(i32_skiplist, node);
+        int rank = SKIP_LIST_GET_NODE_RANK(i32_skiplist, node);
         fprintf(stderr, "node rank = %d\n", rank);
         SKIP_LIST_REMOVE_NODE(i32_skiplist, node);
+        skip_list_print(i32_skiplist);
     }else{
         fprintf(stderr, "not found\n");
     }
-    fprintf(stderr, "TTTTTTTTTTTTTTTT\n");
-    // i32_skiplist->print(i32_skiplist);
+
     SKIP_LIST_DESTROY(i32_skiplist);
 
+    fprintf(stderr, "=================================\n");
     
     static char * const words[] = {
         "firefox",
@@ -755,14 +762,11 @@ int main(){
     str_skiplist = SKIP_LIST_CREATE(char *, void *);
 
     for(int i=0; words[i]!=NULL; i++){
-        key.s = words[i];
-        value.p = NULL;
-        // str_skiplist->insert(str_skiplist, key, value);
         SKIP_LIST_INSERT(str_skiplist, words[i], NULL);
     }
     
     {
-        int rank =skip_list_get_rank_s(str_skiplist, (element_t)"opera");
+        int rank = SKIP_LIST_GET_RANK(str_skiplist, ((char *)"opera"));
         fprintf(stderr, "opera node rank = %d\n", rank);
     }
     skip_list_remove_s(str_skiplist, (element_t)"opera");
