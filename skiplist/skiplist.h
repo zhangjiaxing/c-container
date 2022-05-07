@@ -49,6 +49,7 @@ typedef struct skip_list skip_list_t;
 
 
 typedef skip_node_t* (*insert_func_t)(skip_list_t *l, element_t key, element_t value);
+typedef skip_node_t* (*insert_multi_func_t)(skip_list_t *l, element_t key, element_t value);
 typedef skip_node_t* (*find_func_t)(skip_list_t *l, element_t key);
 typedef bool (*remove_func_t)(skip_list_t *l, element_t key);
 typedef bool (*remove_node_func_t)(skip_list_t *l, skip_node_t *node);
@@ -81,6 +82,7 @@ struct skip_list {
     element_type_t value_type;
     
     insert_func_t insert;
+    insert_multi_func_t insert_multi;
     find_func_t find;
     remove_func_t remove;
     remove_node_func_t remove_node;
@@ -148,6 +150,21 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
 })
 
 
+#define SKIP_LIST_INSERT_MULTI(list, key, value) ({ \
+    element_type_t __key_type__ = ELEMENT_TYPEID(key); \
+    element_type_t __value_type__ = ELEMENT_TYPEID(value); \
+    if(__key_type__ != (list)->key_type){ \
+        fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
+        _Exit(1); \
+    } \
+    if(__value_type__ != (list)->value_type){ \
+        fprintf(stderr, "%s: line %d value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
+        _Exit(1); \
+    } \
+    (list)->insert_multi((list), (element_t)(key), (element_t)(value)); \
+})
+
+
 #define SKIP_LIST_FIND_NODE(list, key) ({ \
     element_type_t __key_type__ = ELEMENT_TYPEID(key); \
     if(__key_type__ != (list)->key_type){ \
@@ -191,6 +208,9 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
 #else
 
 #define SKIP_LIST_INSERT(list, key, value) ((list)->insert((list), (element_t)(key), (element_t)(value)))
+
+
+#define SKIP_LIST_INSERT_MULTI(list, key, value) ((list)->insert_multi((list), (element_t)(key), (element_t)(value)))
 
 
 #define SKIP_LIST_FIND_NODE(list, key) ((list)->find((list), (element_t)key))
