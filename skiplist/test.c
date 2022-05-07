@@ -19,8 +19,13 @@ int main(){
     int num_list[20];
     for(int i=0; i<20; i++){
         int32_t n = rand() % 100;
-        SKIP_LIST_INSERT(i32_skiplist, n, -n);
+        SKIP_LIST_INSERT_MULTI(i32_skiplist, n, -n);
     }
+    SKIP_LIST_INSERT_MULTI(i32_skiplist, 11, -11);
+    SKIP_LIST_INSERT_MULTI(i32_skiplist, 11, -11);
+    SKIP_LIST_INSERT(i32_skiplist, 1234, -1234);
+    SKIP_LIST_INSERT(i32_skiplist, 1234, -1234);
+
 
     skip_list_addr_print(i32_skiplist);
 

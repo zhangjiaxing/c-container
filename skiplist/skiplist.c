@@ -133,6 +133,10 @@ void skip_list_addr_print(skip_list_t *l){
 skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, element_t value);
 
 
+#define DECLARE_SKIP_LIST_INSERT_MULTI(KEY_TYPE, KEY_FIELD) \
+skip_node_t *skip_list_insert_multi_ ## KEY_FIELD(skip_list_t *l, element_t key, element_t value);
+
+
 #define DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
 skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele);
 
@@ -171,6 +175,7 @@ skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
     slist->key_type = ELEMENT_TYPEID(header->key.KEY_FIELD); \
     slist->value_type = value_type_id; \
     slist->insert = &skip_list_insert_ ## KEY_FIELD; \
+    slist->insert_multi = &skip_list_insert_multi_ ## KEY_FIELD; \
     slist->find = &skip_list_find_ ## KEY_FIELD; \
     slist->remove = &skip_list_remove_ ## KEY_FIELD; \
     slist->remove_node = &skip_list_remove_node_ ## KEY_FIELD; \
@@ -224,6 +229,53 @@ static inline int element_compare_s(char *s1, char *s2){
 skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, element_t value){ \
     skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
     unsigned long rank[SKIPLIST_MAXLEVEL] = {}; \
+    skip_node_t *cur = l->header; \
+    for(int i=l->level-1; i>=0; i--){ \
+        rank[i] = i == (l->level-1) ? 0 : rank[i+1]; \
+        while(cur->level[i].forward != l->header){ \
+            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD , key.KEY_FIELD); \
+            if(comp < 0){ \
+                rank[i] += cur->level[i].span;\
+                cur = cur->level[i].forward; \
+            }else if(comp == 0){\
+                return NULL; \
+            }else { \
+                break; \
+            } \
+        } \
+        update[i] = cur; \
+    } \
+    int insert_level = random_level();\
+    skip_node_t *node = skip_node_create_ ## KEY_FIELD(insert_level, key.KEY_FIELD, value); \
+    if(insert_level > l->level){ \
+        for(int i=l->level; i<insert_level; i++){ \
+            rank[i] = 0; \
+            update[i] = l->header; \
+            update[i]->level[i].span = l->length; \
+        } \
+        l->level = insert_level; \
+    } \
+    for(int i=0; i<insert_level ; i++){ \
+        node->level[i].forward = update[i]->level[i].forward; \
+        skip_node_t *prev = update[i]; \
+        prev->level[i].forward = node; \
+        node->level[i].span = prev->level[i].span - (rank[0] - rank[i]); \
+        prev->level[i].span = (rank[0] - rank[i])+1; \
+    } \
+    node->backward = update[0]; \
+    node->level[0].forward->backward = node; \
+    for(int i=insert_level; i < l->level; i++){ \
+        update[i]->level[i].span++; \
+    } \
+    l->length++; \
+    return node; \
+}
+
+
+#define DEF_SKIP_LIST_INSERT_MULTI(KEY_TYPE, KEY_FIELD) \
+skip_node_t *skip_list_insert_multi_ ## KEY_FIELD(skip_list_t *l, element_t key, element_t value){ \
+    skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
+    unsigned long rank[SKIPLIST_MAXLEVEL] = {}; \
     int insert_level = random_level();\
     skip_node_t *node = skip_node_create_ ## KEY_FIELD(insert_level, key.KEY_FIELD, value); \
     skip_node_t *cur = l->header; \
@@ -262,7 +314,8 @@ skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, eleme
     } \
     l->length++; \
     return node; \
-} \
+}
+
 
 
 #define DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
@@ -440,9 +493,9 @@ skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank){
 }
 
 
-
 #define DEF_SKIP_LIST(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
+    DECLARE_SKIP_LIST_INSERT_MULTI(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
@@ -450,6 +503,7 @@ skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank){
     DECLARE_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
+    DEF_SKIP_LIST_INSERT_MULTI(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
