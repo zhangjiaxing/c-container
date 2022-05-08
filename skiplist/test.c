@@ -12,7 +12,6 @@
 int main(){
     skip_list_t *i32_skiplist = SKIP_LIST_CREATE(int32_t, int32_t);
 
-    int num_list[20];
     for(int i=0; i<20; i++){
         int32_t n = rand() % 100;
         SKIP_LIST_INSERT_MULTI(i32_skiplist, n, -n);

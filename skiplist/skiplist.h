@@ -119,6 +119,8 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
 #define SKIP_LIST_CREATE(KEY_TYPE, VALUE_TYPE) ({ \
     KEY_TYPE __key__; \
     VALUE_TYPE __value__; \
+    (void) __key__; \
+    (void) __value__; \
     element_type_t __key_type__ = ELEMENT_TYPEID(__key__); \
     element_type_t __value_type__ = ELEMENT_TYPEID(__value__); \
     if(__key_type__ > TSTR){ \
