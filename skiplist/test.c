@@ -11,11 +11,8 @@
 
 
 int main(){
-    skip_list_t *i32_skiplist;
-    i32_skiplist = SKIP_LIST_CREATE(int32_t, int32_t);
+    skip_list_t *i32_skiplist = SKIP_LIST_CREATE(int32_t, int32_t);
 
-    element_t key;
-    element_t value;
     int num_list[20];
     for(int i=0; i<20; i++){
         int32_t n = rand() % 100;
@@ -30,8 +27,7 @@ int main(){
     skip_list_addr_print(i32_skiplist);
 
     skip_node_t *node;
-    key.i32 = 56;
-    node = SKIP_LIST_FIND_NODE(i32_skiplist, key.i32);
+    node = SKIP_LIST_FIND(i32_skiplist, 56);
     if(node != NULL){
         fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
         int rank = SKIP_LIST_GET_NODE_RANK(i32_skiplist, node);
@@ -122,9 +118,9 @@ int main(){
 
     printf("SKIP_LIST_GET_RANK(\"firefox\") == %lu\n", SKIP_LIST_GET_RANK(str_skiplist, "firefox"));
 
-    // node = SKIP_LIST_FIND_NODE(str_skiplist, "firefox");
+    // node = SKIP_LIST_FIND(str_skiplist, "firefox");
     // int rank = SKIP_LIST_GET_NODE_RANK(str_skiplist, node);
-    printf("SKIP_LIST_GET_NODE_RANK(SKIP_LIST_GET_NODE_BY_RANK(\"firefox\")) == %d \n", SKIP_LIST_GET_NODE_RANK(str_skiplist, SKIP_LIST_FIND_NODE(str_skiplist, "firefox")));
+    printf("SKIP_LIST_GET_NODE_RANK(SKIP_LIST_GET_NODE_BY_RANK(\"firefox\")) == %d \n", SKIP_LIST_GET_NODE_RANK(str_skiplist, SKIP_LIST_FIND(str_skiplist, "firefox")));
 
 
     fprintf(stderr, "test skip_list_for_each_safe\n");

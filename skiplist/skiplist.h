@@ -165,24 +165,13 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
 })
 
 
-#define SKIP_LIST_FIND_NODE(list, key) ({ \
-    element_type_t __key_type__ = ELEMENT_TYPEID(key); \
-    if(__key_type__ != (list)->key_type){ \
-        fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
-        _Exit(1); \
-    } \
-    (list)->find((list), (element_t)key); \
-})
-
-
 #define SKIP_LIST_FIND(list, key) ({ \
     element_type_t __key_type__ = ELEMENT_TYPEID(key); \
     if(__key_type__ != (list)->key_type){ \
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
-    skip_node_t *node = (list)->find((list), (element_t)key); \
-    node->value; \
+    (list)->find((list), (element_t)key); \
 })
 
 
@@ -213,10 +202,7 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
 #define SKIP_LIST_INSERT_MULTI(list, key, value) ((list)->insert_multi((list), (element_t)(key), (element_t)(value)))
 
 
-#define SKIP_LIST_FIND_NODE(list, key) ((list)->find((list), (element_t)key))
-
-
-#define SKIP_LIST_FIND(list, key) ((list)->find((list), (element_t)key)->value)
+#define SKIP_LIST_FIND(list, key) ((list)->find((list), (element_t)key))
 
 
 #define SKIP_LIST_REMOVE(list, key) ((list)->remove((list), (element_t)key))
