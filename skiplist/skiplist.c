@@ -7,10 +7,8 @@
 #include <limits.h>
 #include <errno.h>
 
-
 #include "skiplist.h"
 
-// #define NDEBUG
 
 #define SKIPLIST_MAXLEVEL 32 /* Should be enough for 2^64 elements */
 #define SKIPLIST_P 0.25      /* Skiplist P = 1/4 */

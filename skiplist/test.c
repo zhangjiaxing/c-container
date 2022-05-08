@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 
-
 #define K 1000
 #define M (1000*1000)
 
@@ -51,7 +50,7 @@ int main(){
         clock_t t1 = clock();
         i32_skiplist = SKIP_LIST_CREATE(int32_t, int32_t);
         for(int i=0; i<10*M; i++){
-            i32_skiplist->insert(i32_skiplist, (element_t)data[i], (element_t)0);
+            SKIP_LIST_INSERT(i32_skiplist, data[i], 0);
         }
         clock_t t2 = clock();
 
