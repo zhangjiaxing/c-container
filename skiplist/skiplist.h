@@ -43,19 +43,9 @@ extern char* const element_typename_list[];
 #define ELEMENT_TYPEIDNAME(typeid) ((typeid) > TUNKNOW? element_typename_list[TUNKNOW] : element_typename_list[(typeid)])
 
 
-
 typedef struct skip_node skip_node_t;
 typedef struct skip_list skip_list_t;
 
-
-typedef skip_node_t* (*insert_func_t)(skip_list_t *l, element_t key, element_t value);
-typedef skip_node_t* (*insert_multi_func_t)(skip_list_t *l, element_t key, element_t value);
-typedef skip_node_t* (*find_func_t)(skip_list_t *l, element_t key);
-typedef bool (*remove_func_t)(skip_list_t *l, element_t key);
-typedef bool (*remove_node_func_t)(skip_list_t *l, skip_node_t *node);
-typedef unsigned long (*get_rank_func_t)(skip_list_t *l, element_t ele);
-typedef unsigned long (*get_node_rank_func_t)(skip_list_t *l, skip_node_t *node);
-typedef skip_node_t* (*get_node_by_rank_func_t)(skip_list_t *l, unsigned long rank);
 
 typedef int32_t (*compare_func_t)(element_t key, element_t value);
 typedef void (*print_func_t)(skip_list_t *l);
@@ -82,20 +72,9 @@ struct skip_list {
 
     element_type_t key_type;
     element_type_t value_type;
-    
-    insert_func_t insert;
-    insert_multi_func_t insert_multi;
-    find_func_t find;
-    remove_func_t remove;
-    remove_node_func_t remove_node;
-    get_rank_func_t get_rank;
-    get_node_rank_func_t get_node_rank;
-    get_node_by_rank_func_t get_node_by_rank;
 
     compare_func_t compare;
 };
-
-
 
 
 #define skip_list_foreach(node, l) \
@@ -152,7 +131,7 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
         fprintf(stderr, "%s: line %d value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
         _Exit(1); \
     } \
-    (list)->insert((list), (element_t)(key), (element_t)(value)); \
+    skip_list_insert((list), (element_t)(key), (element_t)(value)); \
 })
 
 
@@ -167,7 +146,7 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
         fprintf(stderr, "%s: line %d value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
         _Exit(1); \
     } \
-    (list)->insert_multi((list), (element_t)(key), (element_t)(value)); \
+    skip_list_insert_multi((list), (element_t)(key), (element_t)(value)); \
 })
 
 
@@ -177,7 +156,7 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
-    (list)->find((list), (element_t)key); \
+    skip_list_find((list), (element_t)key); \
 })
 
 
@@ -187,7 +166,7 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
-    (list)->remove((list), (element_t)key); \
+    skip_list_remove((list), (element_t)key); \
 })
 
 
@@ -197,24 +176,24 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
-    (list)->get_rank((list), (element_t)key); \
+    skip_list_get_rank((list), (element_t)key); \
 })
 
 #else
 
-#define SKIP_LIST_INSERT(list, key, value) ((list)->insert((list), (element_t)(key), (element_t)(value)))
+#define SKIP_LIST_INSERT(list, key, value) (skip_list_insert((list), (element_t)(key), (element_t)(value)))
 
 
-#define SKIP_LIST_INSERT_MULTI(list, key, value) ((list)->insert_multi((list), (element_t)(key), (element_t)(value)))
+#define SKIP_LIST_INSERT_MULTI(list, key, value) (skip_list_insert_multi((list), (element_t)(key), (element_t)(value)))
 
 
-#define SKIP_LIST_FIND(list, key) ((list)->find((list), (element_t)key))
+#define SKIP_LIST_FIND(list, key) (skip_list_find((list), (element_t)key))
 
 
-#define SKIP_LIST_REMOVE(list, key) ((list)->remove((list), (element_t)key))
+#define SKIP_LIST_REMOVE(list, key) (skip_list_remove((list), (element_t)key))
 
 
-#define SKIP_LIST_GET_RANK(list, key) ((list)->get_rank((list), (element_t)key))
+#define SKIP_LIST_GET_RANK(list, key) (skip_list_get_rank((list), (element_t)key))
 
 #endif //NDEBUG
 
@@ -222,10 +201,10 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
 #define SKIP_LIST_DESTROY(list) do{ skip_list_destroy(list); (list)=NULL; } while(0)
 
 
-#define SKIP_LIST_REMOVE_NODE(list, node) ((list)->remove_node((list), node))
+#define SKIP_LIST_REMOVE_NODE(list, node) (skip_list_remove_node((list), node))
 
 
-#define SKIP_LIST_GET_NODE_RANK(list, node) ((list)->get_node_rank((list), node))
+#define SKIP_LIST_GET_NODE_RANK(list, node) (skip_list_get_node_rank((list), node))
 
 
 #define SKIP_LIST_GET_NODE_BY_RANK(list, rank) (skip_list_get_node_by_rank((list), (rank)))
@@ -241,6 +220,30 @@ void skip_list_addr_print(skip_list_t *l);
 
 
 void skip_list_destroy(skip_list_t *l);
+
+
+skip_node_t *skip_list_insert(skip_list_t *l, element_t key, element_t value);
+
+
+skip_node_t *skip_list_insert_multi(skip_list_t *l, element_t key, element_t value);
+
+
+skip_node_t *skip_list_find(skip_list_t *l, element_t ele);
+
+
+bool skip_list_remove(skip_list_t *l, element_t ele);
+
+
+bool skip_list_remove_node(skip_list_t *l, skip_node_t *node);
+
+
+unsigned long skip_list_get_rank(skip_list_t *l, element_t ele);
+
+
+unsigned long skip_list_get_node_rank(skip_list_t *l, skip_node_t *node);
+
+
+skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank);
 
 
 #endif //ifndef SKIPLIST_H
