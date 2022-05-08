@@ -56,6 +56,8 @@ typedef bool (*remove_node_func_t)(skip_list_t *l, skip_node_t *node);
 typedef unsigned long (*get_rank_func_t)(skip_list_t *l, element_t ele);
 typedef unsigned long (*get_node_rank_func_t)(skip_list_t *l, skip_node_t *node);
 typedef skip_node_t* (*get_node_by_rank_func_t)(skip_list_t *l, unsigned long rank);
+
+typedef int32_t (*compare_func_t)(element_t key, element_t value);
 typedef void (*print_func_t)(skip_list_t *l);
 
 
@@ -89,6 +91,8 @@ struct skip_list {
     get_rank_func_t get_rank;
     get_node_rank_func_t get_node_rank;
     get_node_by_rank_func_t get_node_by_rank;
+
+    compare_func_t compare;
 };
 
 
