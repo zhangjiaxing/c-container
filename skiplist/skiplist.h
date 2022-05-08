@@ -95,8 +95,9 @@ struct skip_list {
         for (skip_node_t *tMp__=(node)->backward; (node)!=(l)->header; (node)=tMp__, tMp__=(node)->backward)
 
 
-typedef skip_list_t* (*skip_list_create_func_t)(element_type_t value_type_id);
-extern const skip_list_create_func_t create_func_list[TSTR+1];
+extern const compare_func_t compare_func_list[TSTR+1];
+
+skip_list_t* skip_list_create(element_type_t key_typeid, element_type_t value_typeid, compare_func_t compare);
 
 
 #define SKIP_LIST_CREATE(KEY_TYPE, VALUE_TYPE) ({ \
@@ -114,7 +115,26 @@ extern const skip_list_create_func_t create_func_list[TSTR+1];
         fprintf(stderr, "%s: line %d value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
         _Exit(1); \
     } \
-    create_func_list[__key_type__](__value_type__); \
+    skip_list_create(__key_type__, __value_type__, compare_func_list[__key_type__]); \
+})
+
+
+#define SKIP_LIST_CREATE_CUSTOM(KEY_TYPE, VALUE_TYPE, compare_func) ({ \
+    KEY_TYPE __key__; \
+    VALUE_TYPE __value__; \
+    (void) __key__; \
+    (void) __value__; \
+    element_type_t __key_type__ = ELEMENT_TYPEID(__key__); \
+    element_type_t __value_type__ = ELEMENT_TYPEID(__value__); \
+    if(__key_type__ != TPTR){ \
+        fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
+        _Exit(1); \
+    } \
+    if(__value_type__ > TDOUBLE){ \
+        fprintf(stderr, "%s: line %d value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
+        _Exit(1); \
+    } \
+    skip_list_create(__key_type__, __value_type__, compare_func); \
 })
 
 
