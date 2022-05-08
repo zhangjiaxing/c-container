@@ -48,10 +48,9 @@ DEF_ELEMENT_PRINT(void*, p, "%p")
 DEF_ELEMENT_PRINT(double, f, "%f")
 
 
-#define DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD) \
-skip_node_t *skip_node_create_ ## KEY_FIELD(int level, KEY_TYPE key, element_t value){ \
+skip_node_t *skip_node_create(int level, element_t key, element_t value){ \
     skip_node_t *node = malloc(sizeof(*node) + level*(sizeof(struct skiplist_level))); \
-    node->key.KEY_FIELD = key; \
+    node->key = key; \
     node->value = value; \
     return node; \
 }
@@ -162,12 +161,33 @@ unsigned long skip_list_get_node_rank_ ## KEY_FIELD(skip_list_t *l, skip_node_t 
 skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank);
 
 
+static int element_compare_i32(element_t e1, element_t e2){
+    return e1.i32>e2.i32 ? 1 : (e1.i32==e2.i32 ? 0 : -1);
+}
+
+static int element_compare_u32(element_t e1, element_t e2){
+    return e1.u32>e2.u32 ? 1 : (e1.u32==e2.u32 ? 0 : -1);
+}
+
+static int element_compare_i64(element_t e1, element_t e2){
+    return e1.i64>e2.i64 ? 1 : (e1.i64==e2.i64 ? 0 : -1);
+}
+
+static int element_compare_u64(element_t e1, element_t e2){
+    return e1.u64>e2.u64 ? 1 : (e1.u64==e2.u64 ? 0 : -1);
+}
+
+static int element_compare_s(element_t e1, element_t e2){
+    return strcmp(e1.s, e2.s);
+}
+
+
 #define DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
 skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
     skip_list_t *slist = malloc(sizeof(*slist)); \
     slist->level = 1; \
     slist->length = 0; \
-    skip_node_t *header = skip_node_create_ ## KEY_FIELD(SKIPLIST_MAXLEVEL, (KEY_TYPE)0, (element_t)0); \
+    skip_node_t *header = skip_node_create(SKIPLIST_MAXLEVEL, (element_t)0, (element_t)0); \
     header->backward = header; \
     for(int i=0; i<SKIPLIST_MAXLEVEL; i++){ \
         header->level[i].forward = header; \
@@ -184,8 +204,9 @@ skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
     slist->get_rank = &skip_list_get_rank_ ## KEY_FIELD; \
     slist->get_node_rank = &skip_list_get_node_rank_ ## KEY_FIELD; \
     slist->get_node_by_rank = &skip_list_get_node_by_rank; \
+    slist->compare = &element_compare_##KEY_FIELD; \
     return slist; \
-} \
+}
 
 
 void skip_list_destroy(skip_list_t *l){
@@ -206,25 +227,7 @@ static int random_level(void) {
 }
 
 
-static inline int element_compare_i32(int32_t e1, int32_t e2){
-    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
-}
 
-static inline int element_compare_u32(uint32_t e1, uint32_t e2){
-    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
-}
-
-static inline int element_compare_i64(int64_t e1, int64_t e2){
-    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
-}
-
-static inline int element_compare_u64(uint64_t e1, uint64_t e2){
-    return e1>e2 ? 1 : (e1==e2 ? 0 : -1);
-}
-
-static inline int element_compare_s(char *s1, char *s2){
-    return strcmp(s1, s2);
-}
 
 
 #define DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
@@ -235,7 +238,7 @@ skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, eleme
     for(int i=l->level-1; i>=0; i--){ \
         rank[i] = i == (l->level-1) ? 0 : rank[i+1]; \
         while(cur->level[i].forward != l->header){ \
-            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD , key.KEY_FIELD); \
+            int comp = l->compare(cur->level[i].forward->key , key); \
             if(comp < 0){ \
                 rank[i] += cur->level[i].span;\
                 cur = cur->level[i].forward; \
@@ -248,7 +251,7 @@ skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, eleme
         update[i] = cur; \
     } \
     int insert_level = random_level();\
-    skip_node_t *node = skip_node_create_ ## KEY_FIELD(insert_level, key.KEY_FIELD, value); \
+    skip_node_t *node = skip_node_create(insert_level, key, value); \
     if(insert_level > l->level){ \
         for(int i=l->level; i<insert_level; i++){ \
             rank[i] = 0; \
@@ -279,12 +282,12 @@ skip_node_t *skip_list_insert_multi_ ## KEY_FIELD(skip_list_t *l, element_t key,
     skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
     unsigned long rank[SKIPLIST_MAXLEVEL] = {}; \
     int insert_level = random_level();\
-    skip_node_t *node = skip_node_create_ ## KEY_FIELD(insert_level, key.KEY_FIELD, value); \
+    skip_node_t *node = skip_node_create(insert_level, key, value); \
     skip_node_t *cur = l->header; \
     for(int i=l->level-1; i>=0; i--){ \
         rank[i] = i == (l->level-1) ? 0 : rank[i+1]; \
         while(cur->level[i].forward != l->header){ \
-            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD , key.KEY_FIELD); \
+            int comp = l->compare(cur->level[i].forward->key , key); \
             if(comp < 0 || (comp == 0 && cur->level[i].forward < node)){ \
                 rank[i] += cur->level[i].span;\
                 cur = cur->level[i].forward; \
@@ -322,11 +325,10 @@ skip_node_t *skip_list_insert_multi_ ## KEY_FIELD(skip_list_t *l, element_t key,
 
 #define DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
 skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
-    KEY_TYPE key = ele.KEY_FIELD;  \
     skip_node_t *cur = l->header; \
     for (int i = l->level-1; i >= 0; i--) { \
         while(cur->level[i].forward != l->header){ \
-            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD, key); \
+            int comp = l->compare(cur->level[i].forward->key, ele); \
             if(comp < 0){ \
                 cur = cur->level[i].forward; \
             }else { \
@@ -335,7 +337,7 @@ skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
         } \
     } \
     skip_node_t *next = cur->level[0].forward; \
-    if(next != l->header && element_compare_##KEY_FIELD(next->key.KEY_FIELD, key) == 0){ \
+    if(next != l->header && l->compare(next->key, ele) == 0){ \
         return next; \
     }else{ \
        return NULL; \
@@ -345,12 +347,11 @@ skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
 
 #define DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
 bool skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
-    KEY_TYPE key = ele.KEY_FIELD;  \
     skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
     skip_node_t *cur = l->header; \
     for(int i=l->level-1; i>=0; i--){ \
         while(cur->level[i].forward != l->header){ \
-            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD, key); \
+            int comp = l->compare(cur->level[i].forward->key, ele); \
             if(comp < 0){ \
                 cur = cur->level[i].forward; \
             }else { \
@@ -360,7 +361,7 @@ bool skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
         update[i] = cur; \
     } \
     cur = cur->level[0].forward; \
-    if(cur == l->header || element_compare_##KEY_FIELD(cur->key.KEY_FIELD, key) != 0){ \
+    if(cur == l->header || l->compare(cur->key, ele) != 0){ \
         return false;\
     } \
     for(int i=l->level-1; i>=0 ; i--){ \
@@ -393,7 +394,7 @@ bool skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node){ \
     skip_node_t *cur = l->header; \
     for(int i=l->level-1; i>=0; i--){ \
         while(cur->level[i].forward != l->header){ \
-            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD , ele.KEY_FIELD); \
+            int comp = l->compare(cur->level[i].forward->key , ele); \
             if(comp < 0 || (comp == 0 && cur->level[i].forward < node)){ \
                 cur = cur->level[i].forward; \
             }else{ \
@@ -433,7 +434,7 @@ unsigned long skip_list_get_rank_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
     skip_node_t *cur = l->header; \
     for (int i = l->level-1; i >= 0; i--) { \
         while(cur->level[i].forward != l->header){ \
-            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD , ele.KEY_FIELD); \
+            int comp = l->compare(cur->level[i].forward->key , ele); \
             if(comp < 0){ \
                 rank += cur->level[i].span; \
                 cur = cur->level[i].forward; \
@@ -444,7 +445,7 @@ unsigned long skip_list_get_rank_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
     } \
     rank += cur->level[0].span; \
     cur = cur->level[0].forward; \
-    if(cur != l->header && element_compare_##KEY_FIELD(cur->key.KEY_FIELD, ele.KEY_FIELD) == 0){ \
+    if(cur != l->header && l->compare(cur->key, ele) == 0){ \
         return rank; \
     }else{ \
         return 0; \
@@ -461,7 +462,7 @@ unsigned long skip_list_get_node_rank_ ## KEY_FIELD(skip_list_t *l, skip_node_t 
     skip_node_t *cur = l->header; \
     for(int i = l->level-1; i >= 0; i--) { \
         while(cur->level[i].forward != l->header){ \
-            int comp = element_compare_##KEY_FIELD(cur->level[i].forward->key.KEY_FIELD , node->key.KEY_FIELD); \
+            int comp = l->compare(cur->level[i].forward->key , node->key); \
             if(comp < 0 || (comp == 0 && cur->level[i].forward <= node)){ \
                 rank += cur->level[i].span; \
                 cur = cur->level[i].forward; \
@@ -503,7 +504,6 @@ skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank){
     DECLARE_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD) \
     DECLARE_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_NODE_CREATE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_INSERT_MULTI(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \

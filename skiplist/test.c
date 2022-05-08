@@ -1,3 +1,5 @@
+#define NDEBUG
+
 #include "skiplist.h"
 
 #include <time.h>

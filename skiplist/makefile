@@ -1,10 +1,12 @@
+.PHONY: all clean
+CC=clang
+CFLAGS=-Wall -O3
+
 all: skiplist
-.PHONY: all
 
 skiplist: skiplist.c test.c
-	$(CC) $^ -o $@ 
+	$(CC) $(CFLAGS) $^ -o $@ 
 
 clean:
 	rm -rf skiplist
 
-.PHONY: clean
