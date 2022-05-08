@@ -19,12 +19,14 @@ char* const element_typename_list[] = {
 };
 
 
-// #define ELEMENT_TYPENAME(x) _Generic((x), \
-//                             int32_t: "i32", uint32_t: "u32", \
-//                             int64_t: "i64", uint64_t: "u64", \
-//                             float: "float", double: "double", \
-//                             char*: "string", void*: "pointer", \
-//                             default: "unknow type" )
+/********************
+#define ELEMENT_TYPENAME(x) _Generic((x), \
+                             int32_t: "i32", uint32_t: "u32", \
+                             int64_t: "i64", uint64_t: "u64", \
+                             float: "float", double: "double", \
+                             char*: "string", void*: "pointer", \
+                             default: "unknow type" )
+**********************/
 
 
 #define ELEMENT_TYPENAME(x) (element_typename_list[ELEMENT_TYPEID(x)])
@@ -73,18 +75,20 @@ static const print_element_func_t print_element_func_list[TDOUBLE+1] = {
 };
 
 
-// #define DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD) \
-// void skip_list_print_ ## KEY_FIELD(skip_list_t *l){ \
-//     printf("\nskiplist: count %d\n", l->length); \
-//     for(int i=l->level-1; i>=0; i--){ \
-//         printf("level %d(span%lu): ", i,l->header->level[i].span); \
-//         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){ \
-//             print_element_##KEY_FIELD(cur->key); \
-//             printf("(span%d)-", cur->level[i].span); \
-//         } \
-//         printf("NULL\n"); \
-//     } \
-// }
+/*******************
+#define DEF_SKIP_LIST_PRINT(KEY_TYPE, KEY_FIELD) \
+void skip_list_print_ ## KEY_FIELD(skip_list_t *l){ \
+    printf("\nskiplist: count %d\n", l->length); \
+    for(int i=l->level-1; i>=0; i--){ \
+        printf("level %d(span%lu): ", i,l->header->level[i].span); \
+        for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){ \
+            print_element_##KEY_FIELD(cur->key); \
+            printf("(span%d)-", cur->level[i].span); \
+        } \
+        printf("NULL\n"); \
+    } \
+}
+******************/
 
 
 void skip_list_print(skip_list_t *l){
