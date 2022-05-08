@@ -28,7 +28,7 @@ int main(){
     skip_node_t *node;
     node = SKIP_LIST_FIND(i32_skiplist, 56);
     if(node != NULL){
-        fprintf(stderr, "found key: %d, value is: %d\n", node->key, node->value);
+        fprintf(stderr, "found key: %d, value is: %d\n", node->key.i32, node->value.i32);
         int rank = SKIP_LIST_GET_NODE_RANK(i32_skiplist, node);
         fprintf(stderr, "node rank = %d\n", rank);
         SKIP_LIST_REMOVE_NODE(i32_skiplist, node);
@@ -119,7 +119,7 @@ int main(){
 
     // node = SKIP_LIST_FIND(str_skiplist, "firefox");
     // int rank = SKIP_LIST_GET_NODE_RANK(str_skiplist, node);
-    printf("SKIP_LIST_GET_NODE_RANK(SKIP_LIST_GET_NODE_BY_RANK(\"firefox\")) == %d \n", SKIP_LIST_GET_NODE_RANK(str_skiplist, SKIP_LIST_FIND(str_skiplist, "firefox")));
+    printf("SKIP_LIST_GET_NODE_RANK(SKIP_LIST_GET_NODE_BY_RANK(\"firefox\")) == %lu \n", SKIP_LIST_GET_NODE_RANK(str_skiplist, SKIP_LIST_FIND(str_skiplist, "firefox")));
 
 
     fprintf(stderr, "test skip_list_for_each_safe\n");

@@ -38,9 +38,9 @@ static inline void print_element_##FIELD(element_t ele){ \
 
 
 DEF_ELEMENT_PRINT(int32_t, i32, "%d")
-DEF_ELEMENT_PRINT(uint32_t, u32, "%lu")
-DEF_ELEMENT_PRINT(int64_t, i64, "%lld")
-DEF_ELEMENT_PRINT(uint64_t, u64, "%llu")
+DEF_ELEMENT_PRINT(uint32_t, u32, "%u")
+DEF_ELEMENT_PRINT(int64_t, i64, "%ld")
+DEF_ELEMENT_PRINT(uint64_t, u64, "%lu")
 DEF_ELEMENT_PRINT(char*, s, "%s")
 DEF_ELEMENT_PRINT(void*, p, "%p")
 DEF_ELEMENT_PRINT(double, f, "%f")
