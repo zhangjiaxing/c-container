@@ -152,22 +152,21 @@ static int element_compare_s(element_t e1, element_t e2){
 }
 
 
-#define DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
-skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
-    skip_list_t *slist = malloc(sizeof(*slist)); \
-    slist->level = 1; \
-    slist->length = 0; \
-    skip_node_t *header = skip_node_create(SKIPLIST_MAXLEVEL, (element_t)0, (element_t)0); \
-    header->backward = header; \
-    for(int i=0; i<SKIPLIST_MAXLEVEL; i++){ \
-        header->level[i].forward = header; \
-        header->level[i].span = 0; \
-    } \
-    slist->header = header; \
-    slist->key_type = ELEMENT_TYPEID(header->key.KEY_FIELD); \
-    slist->value_type = value_type_id; \
-    slist->compare = &element_compare_##KEY_FIELD; \
-    return slist; \
+skip_list_t* skip_list_create(element_type_t key_typeid, element_type_t value_typeid, compare_func_t compare){
+    skip_list_t *slist = malloc(sizeof(*slist));
+    slist->level = 1;
+    slist->length = 0;
+    skip_node_t *header = skip_node_create(SKIPLIST_MAXLEVEL, (element_t)0, (element_t)0);
+    header->backward = header;
+    for(int i=0; i<SKIPLIST_MAXLEVEL; i++){
+        header->level[i].forward = header;
+        header->level[i].span = 0;
+    }
+    slist->header = header;
+    slist->key_type = key_typeid;
+    slist->value_type = value_typeid;
+    slist->compare = compare;
+    return slist;
 }
 
 
@@ -448,22 +447,10 @@ skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank){
 }
 
 
-#define DEF_SKIP_LIST(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
-
-
-DEF_SKIP_LIST(int32_t, i32)
-DEF_SKIP_LIST(uint32_t, u32)
-DEF_SKIP_LIST(int64_t, i64)
-DEF_SKIP_LIST(uint64_t, u64)
-DEF_SKIP_LIST(char *, s)
-
-
-
-const skip_list_create_func_t create_func_list[TSTR+1] = {
-    skip_list_create_i32,
-    skip_list_create_u32,
-    skip_list_create_i64,
-    skip_list_create_u64,
-    skip_list_create_s
+const compare_func_t compare_func_list[TSTR+1] = {
+    element_compare_i32,
+    element_compare_u32,
+    element_compare_i64,
+    element_compare_u64,
+    element_compare_s
 };
