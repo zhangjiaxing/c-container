@@ -48,11 +48,11 @@ DEF_ELEMENT_PRINT(void*, p, "%p")
 DEF_ELEMENT_PRINT(double, f, "%f")
 
 
-skip_node_t *skip_node_create(int level, element_t key, element_t value){ \
-    skip_node_t *node = malloc(sizeof(*node) + level*(sizeof(struct skiplist_level))); \
-    node->key = key; \
-    node->value = value; \
-    return node; \
+skip_node_t *skip_node_create(int level, element_t key, element_t value){
+    skip_node_t *node = malloc(sizeof(*node) + level*(sizeof(struct skiplist_level)));
+    node->key = key;
+    node->value = value;
+    return node;
 }
 
 
@@ -130,36 +130,6 @@ void skip_list_addr_print(skip_list_t *l){
 }
 
 
-#define DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
-skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, element_t value);
-
-
-#define DECLARE_SKIP_LIST_INSERT_MULTI(KEY_TYPE, KEY_FIELD) \
-skip_node_t *skip_list_insert_multi_ ## KEY_FIELD(skip_list_t *l, element_t key, element_t value);
-
-
-#define DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
-skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele);
-
-
-#define DECLARE_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
-bool skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele);
-
-
-#define DECLARE_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
-bool skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node);
-
-
-#define DECLARE_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD) \
-unsigned long skip_list_get_rank_ ## KEY_FIELD(skip_list_t *l, element_t ele);
-
-
-#define DECLARE_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KEY_FIELD) \
-unsigned long skip_list_get_node_rank_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node);
-
-
-skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank);
-
 
 static int element_compare_i32(element_t e1, element_t e2){
     return e1.i32>e2.i32 ? 1 : (e1.i32==e2.i32 ? 0 : -1);
@@ -196,14 +166,6 @@ skip_list_t* skip_list_create_ ## KEY_FIELD(element_type_t value_type_id){ \
     slist->header = header; \
     slist->key_type = ELEMENT_TYPEID(header->key.KEY_FIELD); \
     slist->value_type = value_type_id; \
-    slist->insert = &skip_list_insert_ ## KEY_FIELD; \
-    slist->insert_multi = &skip_list_insert_multi_ ## KEY_FIELD; \
-    slist->find = &skip_list_find_ ## KEY_FIELD; \
-    slist->remove = &skip_list_remove_ ## KEY_FIELD; \
-    slist->remove_node = &skip_list_remove_node_ ## KEY_FIELD; \
-    slist->get_rank = &skip_list_get_rank_ ## KEY_FIELD; \
-    slist->get_node_rank = &skip_list_get_node_rank_ ## KEY_FIELD; \
-    slist->get_node_by_rank = &skip_list_get_node_by_rank; \
     slist->compare = &element_compare_##KEY_FIELD; \
     return slist; \
 }
@@ -227,255 +189,245 @@ static int random_level(void) {
 }
 
 
-
-
-
-#define DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
-skip_node_t *skip_list_insert_ ## KEY_FIELD(skip_list_t *l, element_t key, element_t value){ \
-    skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
-    unsigned long rank[SKIPLIST_MAXLEVEL] = {}; \
-    skip_node_t *cur = l->header; \
-    for(int i=l->level-1; i>=0; i--){ \
-        rank[i] = i == (l->level-1) ? 0 : rank[i+1]; \
-        while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key , key); \
-            if(comp < 0){ \
-                rank[i] += cur->level[i].span;\
-                cur = cur->level[i].forward; \
-            }else if(comp == 0){\
-                return NULL; \
-            }else { \
-                break; \
-            } \
-        } \
-        update[i] = cur; \
-    } \
-    int insert_level = random_level();\
-    skip_node_t *node = skip_node_create(insert_level, key, value); \
-    if(insert_level > l->level){ \
-        for(int i=l->level; i<insert_level; i++){ \
-            rank[i] = 0; \
-            update[i] = l->header; \
-            update[i]->level[i].span = l->length; \
-        } \
-        l->level = insert_level; \
-    } \
-    for(int i=0; i<insert_level ; i++){ \
-        node->level[i].forward = update[i]->level[i].forward; \
-        skip_node_t *prev = update[i]; \
-        prev->level[i].forward = node; \
-        node->level[i].span = prev->level[i].span - (rank[0] - rank[i]); \
-        prev->level[i].span = (rank[0] - rank[i])+1; \
-    } \
-    node->backward = update[0]; \
-    node->level[0].forward->backward = node; \
-    for(int i=insert_level; i < l->level; i++){ \
-        update[i]->level[i].span++; \
-    } \
-    l->length++; \
-    return node; \
+skip_node_t *skip_list_insert(skip_list_t *l, element_t key, element_t value){
+    skip_node_t *update[SKIPLIST_MAXLEVEL] = {};
+    unsigned long rank[SKIPLIST_MAXLEVEL] = {};
+    skip_node_t *cur = l->header;
+    for(int i=l->level-1; i>=0; i--){
+        rank[i] = i == (l->level-1) ? 0 : rank[i+1];
+        while(cur->level[i].forward != l->header){
+            int comp = l->compare(cur->level[i].forward->key , key);
+            if(comp < 0){
+                rank[i] += cur->level[i].span;
+                cur = cur->level[i].forward;
+            }else if(comp == 0){
+                return NULL;
+            }else {
+                break;
+            }
+        }
+        update[i] = cur;
+    }
+    int insert_level = random_level();
+    skip_node_t *node = skip_node_create(insert_level, key, value);
+    if(insert_level > l->level){
+        for(int i=l->level; i<insert_level; i++){
+            rank[i] = 0;
+            update[i] = l->header;
+            update[i]->level[i].span = l->length;
+        }
+        l->level = insert_level;
+    }
+    for(int i=0; i<insert_level ; i++){
+        node->level[i].forward = update[i]->level[i].forward;
+        skip_node_t *prev = update[i];
+        prev->level[i].forward = node;
+        node->level[i].span = prev->level[i].span - (rank[0] - rank[i]);
+        prev->level[i].span = (rank[0] - rank[i])+1;
+    }
+    node->backward = update[0];
+    node->level[0].forward->backward = node;
+    for(int i=insert_level; i < l->level; i++){
+        update[i]->level[i].span++;
+    }
+    l->length++;
+    return node;
 }
 
 
-#define DEF_SKIP_LIST_INSERT_MULTI(KEY_TYPE, KEY_FIELD) \
-skip_node_t *skip_list_insert_multi_ ## KEY_FIELD(skip_list_t *l, element_t key, element_t value){ \
-    skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
-    unsigned long rank[SKIPLIST_MAXLEVEL] = {}; \
-    int insert_level = random_level();\
-    skip_node_t *node = skip_node_create(insert_level, key, value); \
-    skip_node_t *cur = l->header; \
-    for(int i=l->level-1; i>=0; i--){ \
-        rank[i] = i == (l->level-1) ? 0 : rank[i+1]; \
-        while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key , key); \
-            if(comp < 0 || (comp == 0 && cur->level[i].forward < node)){ \
-                rank[i] += cur->level[i].span;\
-                cur = cur->level[i].forward; \
-            }else{\
-                break; \
-            } \
-        } \
-        update[i] = cur; \
-    } \
-    if(insert_level > l->level){ \
-        for(int i=l->level; i<insert_level; i++){ \
-            rank[i] = 0; \
-            update[i] = l->header; \
-            update[i]->level[i].span = l->length; \
-        } \
-        l->level = insert_level; \
-    } \
-    for(int i=0; i<insert_level ; i++){ \
-        node->level[i].forward = update[i]->level[i].forward; \
-        skip_node_t *prev = update[i]; \
-        prev->level[i].forward = node; \
-        node->level[i].span = prev->level[i].span - (rank[0] - rank[i]); \
-        prev->level[i].span = (rank[0] - rank[i])+1; \
-    } \
-    node->backward = update[0]; \
-    node->level[0].forward->backward = node; \
-    for(int i=insert_level; i < l->level; i++){ \
-        update[i]->level[i].span++; \
-    } \
-    l->length++; \
-    return node; \
+skip_node_t *skip_list_insert_multi(skip_list_t *l, element_t key, element_t value){
+    skip_node_t *update[SKIPLIST_MAXLEVEL] = {};
+    unsigned long rank[SKIPLIST_MAXLEVEL] = {};
+    int insert_level = random_level();
+    skip_node_t *node = skip_node_create(insert_level, key, value);
+    skip_node_t *cur = l->header;
+    for(int i=l->level-1; i>=0; i--){
+        rank[i] = i == (l->level-1) ? 0 : rank[i+1];
+        while(cur->level[i].forward != l->header){
+            int comp = l->compare(cur->level[i].forward->key , key);
+            if(comp < 0 || (comp == 0 && cur->level[i].forward < node)){
+                rank[i] += cur->level[i].span;
+                cur = cur->level[i].forward;
+            }else{
+                break;
+            }
+        }
+        update[i] = cur;
+    }
+    if(insert_level > l->level){
+        for(int i=l->level; i<insert_level; i++){
+            rank[i] = 0;
+            update[i] = l->header;
+            update[i]->level[i].span = l->length;
+        }
+        l->level = insert_level;
+    }
+    for(int i=0; i<insert_level ; i++){
+        node->level[i].forward = update[i]->level[i].forward;
+        skip_node_t *prev = update[i];
+        prev->level[i].forward = node;
+        node->level[i].span = prev->level[i].span - (rank[0] - rank[i]);
+        prev->level[i].span = (rank[0] - rank[i])+1;
+    }
+    node->backward = update[0];
+    node->level[0].forward->backward = node;
+    for(int i=insert_level; i < l->level; i++){
+        update[i]->level[i].span++;
+    }
+    l->length++;
+    return node;
 }
 
 
 
-#define DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
-skip_node_t *skip_list_find_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
-    skip_node_t *cur = l->header; \
-    for (int i = l->level-1; i >= 0; i--) { \
-        while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key, ele); \
-            if(comp < 0){ \
-                cur = cur->level[i].forward; \
-            }else { \
-                break; \
-            } \
-        } \
-    } \
-    skip_node_t *next = cur->level[0].forward; \
-    if(next != l->header && l->compare(next->key, ele) == 0){ \
-        return next; \
-    }else{ \
-       return NULL; \
-    } \
-} \
-
-
-#define DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
-bool skip_list_remove_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
-    skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
-    skip_node_t *cur = l->header; \
-    for(int i=l->level-1; i>=0; i--){ \
-        while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key, ele); \
-            if(comp < 0){ \
-                cur = cur->level[i].forward; \
-            }else { \
-                break; \
-            } \
-        } \
-        update[i] = cur; \
-    } \
-    cur = cur->level[0].forward; \
-    if(cur == l->header || l->compare(cur->key, ele) != 0){ \
-        return false;\
-    } \
-    for(int i=l->level-1; i>=0 ; i--){ \
-        skip_node_t *prev = update[i]; \
-        if(prev->level[i].forward == cur){ \
-            prev->level[i].span  += cur->level[i].span - 1; \
-            prev->level[i].forward = cur->level[i].forward; \
-        }else{ \
-            prev->level[i].span --; \
-        } \
-    } \
-    skip_node_t *next = cur->level[0].forward; \
-    next->backward = update[0]; \
-    skip_node_destroy(cur); \
-    l->length--; \
-    while(l->level>1 && l->header->level[l->level-1].forward == l->header){ \
-        l->level--; \
-    } \
-    return true; \
+skip_node_t *skip_list_find(skip_list_t *l, element_t ele){
+    skip_node_t *cur = l->header;
+    for (int i = l->level-1; i >= 0; i--) {
+        while(cur->level[i].forward != l->header){
+            int comp = l->compare(cur->level[i].forward->key, ele);
+            if(comp < 0){
+                cur = cur->level[i].forward;
+            }else {
+                break;
+            }
+        }
+    }
+    skip_node_t *next = cur->level[0].forward;
+    if(next != l->header && l->compare(next->key, ele) == 0){
+        return next;
+    }else{
+       return NULL;
+    }
 }
 
 
-#define DEF_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
-bool skip_list_remove_node_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node){ \
-    if(node == NULL || node == l->header){ \
-        return false; \
-    } \
-    element_t ele = node->key; \
-    skip_node_t *update[SKIPLIST_MAXLEVEL] = {}; \
-    skip_node_t *cur = l->header; \
-    for(int i=l->level-1; i>=0; i--){ \
-        while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key , ele); \
-            if(comp < 0 || (comp == 0 && cur->level[i].forward < node)){ \
-                cur = cur->level[i].forward; \
-            }else{ \
-                break; \
-            } \
-        } \
-        update[i] = cur; \
-    } \
-    cur = cur->level[0].forward; \
-    if(cur == l->header || cur != node){ \
-        return false; \
-    } \
-    skip_node_t *prev; \
-    for(int i=l->level-1; i>=0 ; i--){ \
-        prev = update[i]; \
-        if(prev->level[i].forward == node){ \
-            prev->level[i].span  += cur->level[i].span - 1; \
-            prev->level[i].forward = cur->level[i].forward; \
-        }else{ \
-            prev->level[i].span--; \
-        } \
-    } \
-    skip_node_t *next = node->level[0].forward; \
-    next->backward = update[0]; \
-    skip_node_destroy(node); \
-    l->length--; \
-    while(l->level>1 && l->header->level[l->level-1].forward == l->header){ \
-        l->level--; \
-    } \
-    return true; \
+bool skip_list_remove(skip_list_t *l, element_t ele){
+    skip_node_t *update[SKIPLIST_MAXLEVEL] = {};
+    skip_node_t *cur = l->header;
+    for(int i=l->level-1; i>=0; i--){
+        while(cur->level[i].forward != l->header){
+            int comp = l->compare(cur->level[i].forward->key, ele);
+            if(comp < 0){
+                cur = cur->level[i].forward;
+            }else {
+                break;
+            }
+        }
+        update[i] = cur;
+    }
+    cur = cur->level[0].forward;
+    if(cur == l->header || l->compare(cur->key, ele) != 0){
+        return false;
+    }
+    for(int i=l->level-1; i>=0 ; i--){
+        skip_node_t *prev = update[i];
+        if(prev->level[i].forward == cur){
+            prev->level[i].span  += cur->level[i].span - 1;
+            prev->level[i].forward = cur->level[i].forward;
+        }else{
+            prev->level[i].span --;
+        }
+    }
+    skip_node_t *next = cur->level[0].forward;
+    next->backward = update[0];
+    skip_node_destroy(cur);
+    l->length--;
+    while(l->level>1 && l->header->level[l->level-1].forward == l->header){
+        l->level--;
+    }
+    return true;
 }
 
 
-#define DEF_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD) \
-unsigned long skip_list_get_rank_ ## KEY_FIELD(skip_list_t *l, element_t ele){ \
-    unsigned long rank = 0; \
-    skip_node_t *cur = l->header; \
-    for (int i = l->level-1; i >= 0; i--) { \
-        while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key , ele); \
-            if(comp < 0){ \
-                rank += cur->level[i].span; \
-                cur = cur->level[i].forward; \
-            }else{ \
-                break; \
-            } \
-        } \
-    } \
-    rank += cur->level[0].span; \
-    cur = cur->level[0].forward; \
-    if(cur != l->header && l->compare(cur->key, ele) == 0){ \
-        return rank; \
-    }else{ \
-        return 0; \
-    } \
+bool skip_list_remove_node(skip_list_t *l, skip_node_t *node){
+    if(node == NULL || node == l->header){
+        return false;
+    }
+    element_t ele = node->key;
+    skip_node_t *update[SKIPLIST_MAXLEVEL] = {};
+    skip_node_t *cur = l->header;
+    for(int i=l->level-1; i>=0; i--){
+        while(cur->level[i].forward != l->header){
+            int comp = l->compare(cur->level[i].forward->key , ele);
+            if(comp < 0 || (comp == 0 && cur->level[i].forward < node)){
+                cur = cur->level[i].forward;
+            }else{
+                break;
+            }
+        }
+        update[i] = cur;
+    }
+    cur = cur->level[0].forward;
+    if(cur == l->header || cur != node){
+        return false;
+    }
+    skip_node_t *prev;
+    for(int i=l->level-1; i>=0 ; i--){
+        prev = update[i];
+        if(prev->level[i].forward == node){
+            prev->level[i].span  += cur->level[i].span - 1;
+            prev->level[i].forward = cur->level[i].forward;
+        }else{
+            prev->level[i].span--;
+        }
+    }
+    skip_node_t *next = node->level[0].forward;
+    next->backward = update[0];
+    skip_node_destroy(node);
+    l->length--;
+    while(l->level>1 && l->header->level[l->level-1].forward == l->header){
+        l->level--;
+    }
+    return true;
 }
 
 
-#define DEF_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KEY_FIELD) \
-unsigned long skip_list_get_node_rank_ ## KEY_FIELD(skip_list_t *l, skip_node_t *node){ \
-    if(node == NULL || node == l->header){ \
-        return ENOENT; \
-    } \
-    unsigned long rank = 0; \
-    skip_node_t *cur = l->header; \
-    for(int i = l->level-1; i >= 0; i--) { \
-        while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key , node->key); \
-            if(comp < 0 || (comp == 0 && cur->level[i].forward <= node)){ \
-                rank += cur->level[i].span; \
-                cur = cur->level[i].forward; \
-            }else{ \
-                break; \
-            } \
-        } \
-    } \
-    if(cur == node){ \
-        return rank; \
-    }else{ \
-        return 0; \
-    } \
+unsigned long skip_list_get_rank(skip_list_t *l, element_t ele){
+    unsigned long rank = 0;
+    skip_node_t *cur = l->header;
+    for (int i = l->level-1; i >= 0; i--) {
+        while(cur->level[i].forward != l->header){
+            int comp = l->compare(cur->level[i].forward->key , ele);
+            if(comp < 0){
+                rank += cur->level[i].span;
+                cur = cur->level[i].forward;
+            }else{
+                break;
+            }
+        }
+    }
+    rank += cur->level[0].span;
+    cur = cur->level[0].forward;
+    if(cur != l->header && l->compare(cur->key, ele) == 0){
+        return rank;
+    }else{
+        return 0;
+    }
+}
+
+
+unsigned long skip_list_get_node_rank(skip_list_t *l, skip_node_t *node){
+    if(node == NULL || node == l->header){
+        return ENOENT;
+    }
+    unsigned long rank = 0;
+    skip_node_t *cur = l->header;
+    for(int i = l->level-1; i >= 0; i--) {
+        while(cur->level[i].forward != l->header){
+            int comp = l->compare(cur->level[i].forward->key , node->key);
+            if(comp < 0 || (comp == 0 && cur->level[i].forward <= node)){
+                rank += cur->level[i].span;
+                cur = cur->level[i].forward;
+            }else{
+                break;
+            }
+        }
+    }
+    if(cur == node){
+        return rank;
+    }else{
+        return 0;
+    }
 }
 
 
@@ -497,21 +449,7 @@ skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank){
 
 
 #define DEF_SKIP_LIST(KEY_TYPE, KEY_FIELD) \
-    DECLARE_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
-    DECLARE_SKIP_LIST_INSERT_MULTI(KEY_TYPE, KEY_FIELD) \
-    DECLARE_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
-    DECLARE_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
-    DECLARE_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
-    DECLARE_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD) \
-    DECLARE_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_LIST_INSERT(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_LIST_INSERT_MULTI(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_LIST_REMOVE(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KEY_FIELD) \
     DEF_SKIP_LIST_CREATE(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_LIST_FIND(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_LIST_GET_RANK(KEY_TYPE, KEY_FIELD) \
-    DEF_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KEY_FIELD)
 
 
 DEF_SKIP_LIST(int32_t, i32)
