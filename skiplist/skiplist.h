@@ -137,7 +137,7 @@ skip_list_t* skip_list_create(element_type_t key_typeid, element_type_t value_ty
         fprintf(stderr, "%s: line %d value type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__value_type__)); \
         _Exit(1); \
     } \
-    skip_list_create(__key_type__, __value_type__, compare_func); \
+    skip_list_create(__key_type__, __value_type__, (compare_func)); \
 })
 
 
@@ -179,7 +179,7 @@ skip_list_t* skip_list_create(element_type_t key_typeid, element_type_t value_ty
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
-    skip_list_find((list), (element_t)key); \
+    skip_list_find((list), (element_t)(key)); \
 })
 
 
@@ -189,7 +189,7 @@ skip_list_t* skip_list_create(element_type_t key_typeid, element_type_t value_ty
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
-    skip_list_remove((list), (element_t)key); \
+    skip_list_remove((list), (element_t)(key)); \
 })
 
 
@@ -199,7 +199,7 @@ skip_list_t* skip_list_create(element_type_t key_typeid, element_type_t value_ty
         fprintf(stderr, "%s: line %d key type (%s) error\n", __func__, __LINE__, ELEMENT_TYPEIDNAME(__key_type__)); \
         _Exit(1); \
     } \
-    skip_list_get_rank((list), (element_t)key); \
+    skip_list_get_rank((list), (element_t)(key)); \
 })
 
 #else
@@ -210,24 +210,24 @@ skip_list_t* skip_list_create(element_type_t key_typeid, element_type_t value_ty
 #define SKIP_LIST_INSERT_MULTI(list, key, value) (skip_list_insert_multi((list), (element_t)(key), (element_t)(value)))
 
 
-#define SKIP_LIST_FIND(list, key) (skip_list_find((list), (element_t)key))
+#define SKIP_LIST_FIND(list, key) (skip_list_find((list), (element_t)(key)))
 
 
-#define SKIP_LIST_REMOVE(list, key) (skip_list_remove((list), (element_t)key))
+#define SKIP_LIST_REMOVE(list, key) (skip_list_remove((list), (element_t)(key)))
 
 
-#define SKIP_LIST_GET_RANK(list, key) (skip_list_get_rank((list), (element_t)key))
+#define SKIP_LIST_GET_RANK(list, key) (skip_list_get_rank((list), (element_t)(key)))
 
 #endif //NDEBUG
 
 
-#define SKIP_LIST_DESTROY(list) do{ skip_list_destroy(list); (list)=NULL; } while(0)
+#define SKIP_LIST_DESTROY(list) do{ skip_list_destroy((list)); (list)=NULL; } while(0)
 
 
-#define SKIP_LIST_REMOVE_NODE(list, node) (skip_list_remove_node((list), node))
+#define SKIP_LIST_REMOVE_NODE(list, node) (skip_list_remove_node((list), (node)))
 
 
-#define SKIP_LIST_GET_NODE_RANK(list, node) (skip_list_get_node_rank((list), node))
+#define SKIP_LIST_GET_NODE_RANK(list, node) (skip_list_get_node_rank((list), (node)))
 
 
 #define SKIP_LIST_GET_NODE_BY_RANK(list, rank) (skip_list_get_node_by_rank((list), (rank)))
