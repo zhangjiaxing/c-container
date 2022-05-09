@@ -34,7 +34,7 @@ char* const element_typename_list[] = {
 
 //    printf(PRINTF_FMT "-", ele.FIELD);
 #define DEF_ELEMENT_PRINT(TYPE, FIELD, PRINTF_FMT) \
-static inline void print_element_##FIELD(element_t ele){ \
+static void print_element_##FIELD(element_t ele){ \
     printf(PRINTF_FMT, ele.FIELD); \
 }
 
@@ -59,8 +59,6 @@ skip_node_t *skip_node_create(int level, element_t key, element_t value){
 void skip_node_destroy(skip_node_t *node){
     free(node);
 }
-
-typedef void (*print_element_func_t)(element_t ele);
 
 
 static const print_element_func_t print_element_func_list[TDOUBLE+1] = {
@@ -95,9 +93,9 @@ void skip_list_print(skip_list_t *l){
     for(int i=l->level-1; i>=0; i--){
         printf("level %d: ", i);
         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
-            print_element_func_list[l->key_type](cur->key);
+            l->print_key(cur->key);
             printf("(v");
-            print_element_func_list[l->value_type](cur->value);
+            l->print_value(cur->value);
             printf(")-");
         }
         printf("NULL\n");
@@ -110,7 +108,7 @@ void skip_list_rank_print(skip_list_t *l){
     for(int i=l->level-1; i>=0; i--){
         printf("level %d(span%lu): ", i,l->header->level[i].span);
         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
-            print_element_func_list[l->key_type](cur->key);
+            l->print_key(cur->key);
             printf("(span%lu)-", cur->level[i].span);
         }
         printf("NULL\n");
@@ -122,7 +120,7 @@ void skip_list_addr_print(skip_list_t *l){
     for(int i=l->level-1; i>=0; i--){
         printf("level %d(%p): ", i, l->header);
         for(skip_node_t *cur=l->header->level[i].forward; cur!=l->header; cur=cur->level[i].forward){
-            print_element_func_list[l->key_type](cur->key);
+            l->print_key(cur->key);
             printf("(addr%p)-", cur);
         }
         printf("NULL\n");
@@ -166,6 +164,8 @@ skip_list_t* skip_list_create(element_type_t key_typeid, element_type_t value_ty
     slist->key_type = key_typeid;
     slist->value_type = value_typeid;
     slist->compare = compare;
+    slist->print_key = print_element_func_list[key_typeid];
+    slist->print_value = print_element_func_list[value_typeid];
     return slist;
 }
 
