@@ -130,19 +130,19 @@ void skip_list_addr_print(skip_list_t *l){
 
 
 static int element_compare_i32(element_t e1, element_t e2){
-    return e1.i32>e2.i32 ? 1 : (e1.i32==e2.i32 ? 0 : -1);
+    return e1.i32<e2.i32 ? -1 : (e1.i32==e2.i32 ? 0 : 1);
 }
 
 static int element_compare_u32(element_t e1, element_t e2){
-    return e1.u32>e2.u32 ? 1 : (e1.u32==e2.u32 ? 0 : -1);
+    return e1.u32<e2.u32 ? -1 : (e1.u32==e2.u32 ? 0 : 1);
 }
 
 static int element_compare_i64(element_t e1, element_t e2){
-    return e1.i64>e2.i64 ? 1 : (e1.i64==e2.i64 ? 0 : -1);
+    return e1.i64<e2.i64 ? -1 : (e1.i64==e2.i64 ? 0 : 1);
 }
 
 static int element_compare_u64(element_t e1, element_t e2){
-    return e1.u64>e2.u64 ? 1 : (e1.u64==e2.u64 ? 0 : -1);
+    return e1.u64<e2.u64 ? -1 : (e1.u64==e2.u64 ? 0 : 1);
 }
 
 static int element_compare_s(element_t e1, element_t e2){
