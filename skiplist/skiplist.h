@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 
 
 typedef union element {
@@ -47,7 +48,7 @@ typedef struct skip_node skip_node_t;
 typedef struct skip_list skip_list_t;
 
 
-typedef int32_t (*compare_func_t)(element_t key, element_t value);
+typedef int (*compare_func_t)(element_t a, element_t b);
 typedef void (*print_func_t)(skip_list_t *l);
 typedef void (*print_element_func_t)(element_t ele);
 

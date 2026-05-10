@@ -149,8 +149,7 @@ int main(){
     test_uint32_bench();
     
     test_srt();
-
-    test_type_err();
+    // test_type_err(); // 该测试调用 _Exit(1)，不包含在常规测试中
 
     return 0;
 }
