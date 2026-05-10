@@ -407,7 +407,7 @@ unsigned long skip_list_get_rank(skip_list_t *l, element_t ele){
 
 unsigned long skip_list_get_node_rank(skip_list_t *l, skip_node_t *node){
     if(node == NULL || node == l->header){
-        return ENOENT;
+        return 0;
     }
     unsigned long rank = 0;
     skip_node_t *cur = l->header;
@@ -435,7 +435,7 @@ skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank){
     skip_node_t *cur = l->header;
 
     for (int i = l->level-1; i >= 0; i--) {
-        while (cur->level[i].forward && (traversed + cur->level[i].span) <= rank){
+        while (cur->level[i].forward != l->header && (traversed + cur->level[i].span) <= rank){
             traversed += cur->level[i].span;
             cur = cur->level[i].forward;
         }

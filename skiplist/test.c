@@ -39,6 +39,9 @@ void test_int32(){
         printf("not found\n");
     }
 
+    int notfound_rank = SKIP_LIST_GET_RANK(i32_skiplist, 9999);
+    printf("rank of notfound 9999: %d (expect 0)\n", notfound_rank);
+
     SKIP_LIST_DESTROY(i32_skiplist);
 }
 
@@ -98,6 +101,10 @@ void test_srt(){
     int rank = SKIP_LIST_GET_RANK(str_skiplist, ((char *)"opera"));
     printf("opera node rank = %d\n", rank);
     SKIP_LIST_REMOVE(str_skiplist, "opera");
+
+    rank = SKIP_LIST_GET_RANK(str_skiplist, "opera");
+    printf("rank of deleted opera: %d (expect 0)\n", rank);
+
     skip_list_print(str_skiplist);
 
     fprintf(stderr, "\n=========== test reverse\n");

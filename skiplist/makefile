@@ -1,5 +1,5 @@
 .PHONY: all clean
-CC=clang
+CC=gcc
 CFLAGS=-Wall -O3
 
 all: skiplist
