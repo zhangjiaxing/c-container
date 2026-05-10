@@ -124,6 +124,7 @@ DECLARE_SKIP_LIST_PRINT(KEY_TYPE, KNAME, VALUE_TYPE, VNAME)
 #define DEF_SKIP_NODE_CREATE(KEY_TYPE, KNAME, VALUE_TYPE, VNAME) \
 static skip_node_##KNAME##_##VNAME##_t *skip_node_create_##KNAME##_##VNAME(int level, KEY_TYPE key, VALUE_TYPE value){ \
     skip_node_##KNAME##_##VNAME##_t *node = malloc(sizeof(*node) + level * sizeof(struct skiplist_level_##KNAME##_##VNAME)); \
+    if (!node) return NULL; \
     node->key = key; \
     node->value = value; \
     return node; \
@@ -137,11 +138,13 @@ static void skip_node_destroy_##KNAME##_##VNAME(skip_node_##KNAME##_##VNAME##_t 
 #define DEF_SKIP_LIST_CREATE(KEY_TYPE, KNAME, VALUE_TYPE, VNAME) \
 skip_list_##KNAME##_##VNAME##_t* skip_list_create_##KNAME##_##VNAME(){ \
     skip_list_##KNAME##_##VNAME##_t *slist = malloc(sizeof(*slist)); \
+    if (!slist) return NULL; \
     slist->level = 1; \
     slist->length = 0; \
     KEY_TYPE dummy_key = (KEY_TYPE)0; \
     VALUE_TYPE dummy_value = (VALUE_TYPE)0; \
     skip_node_##KNAME##_##VNAME##_t *header = skip_node_create_##KNAME##_##VNAME(SKIPLIST_MAXLEVEL, dummy_key, dummy_value); \
+    if (!header) { free(slist); return NULL; } \
     header->backward = header; \
     for(int i=0; i<SKIPLIST_MAXLEVEL; i++){ \
         header->level[i].forward = header; \
@@ -163,6 +166,7 @@ skip_list_##KNAME##_##VNAME##_t* skip_list_create_##KNAME##_##VNAME(){ \
 
 #define DEF_SKIP_LIST_DESTROY(KEY_TYPE, KNAME, VALUE_TYPE, VNAME) \
 void skip_list_destroy_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l){ \
+    if (!l) return; \
     skip_node_##KNAME##_##VNAME##_t *cur = l->header->level[0].forward; \
     for(skip_node_##KNAME##_##VNAME##_t *next=cur->level[0].forward; cur!=l->header; cur=next, next=cur->level[0].forward){ \
         skip_node_destroy_##KNAME##_##VNAME(cur); \
@@ -193,6 +197,7 @@ skip_node_##KNAME##_##VNAME##_t *skip_list_insert_##KNAME##_##VNAME(skip_list_##
     } \
     int insert_level = random_level(); \
     skip_node_##KNAME##_##VNAME##_t *node = skip_node_create_##KNAME##_##VNAME(insert_level, key, value); \
+    if (!node) return NULL; \
     if(insert_level > l->level){ \
         for(int i=l->level; i<insert_level; i++){ \
             rank[i] = 0; \
@@ -223,6 +228,7 @@ skip_node_##KNAME##_##VNAME##_t *skip_list_insert_multi_##KNAME##_##VNAME(skip_l
     unsigned long rank[SKIPLIST_MAXLEVEL] = {}; \
     int insert_level = random_level(); \
     skip_node_##KNAME##_##VNAME##_t *node = skip_node_create_##KNAME##_##VNAME(insert_level, key, value); \
+    if (!node) return NULL; \
     skip_node_##KNAME##_##VNAME##_t *cur = l->header; \
     for(int i=l->level-1; i>=0; i--){ \
         rank[i] = i == (l->level-1) ? 0 : rank[i+1]; \
@@ -263,6 +269,7 @@ skip_node_##KNAME##_##VNAME##_t *skip_list_insert_multi_##KNAME##_##VNAME(skip_l
 
 #define DEF_SKIP_LIST_FIND(KEY_TYPE, KNAME, VALUE_TYPE, VNAME) \
 skip_node_##KNAME##_##VNAME##_t *skip_list_find_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l, KEY_TYPE key){ \
+    if (!l) return NULL; \
     skip_node_##KNAME##_##VNAME##_t *cur = l->header; \
     for (int i = l->level-1; i >= 0; i--) { \
         while(cur->level[i].forward != l->header){ \
@@ -284,6 +291,7 @@ skip_node_##KNAME##_##VNAME##_t *skip_list_find_##KNAME##_##VNAME(skip_list_##KN
 
 #define DEF_SKIP_LIST_REMOVE(KEY_TYPE, KNAME, VALUE_TYPE, VNAME) \
 bool skip_list_remove_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l, KEY_TYPE key){ \
+    if (!l) return false; \
     skip_node_##KNAME##_##VNAME##_t *update[SKIPLIST_MAXLEVEL] = {}; \
     skip_node_##KNAME##_##VNAME##_t *cur = l->header; \
     for(int i=l->level-1; i>=0; i--){ \
@@ -322,7 +330,7 @@ bool skip_list_remove_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l, KEY_
 
 #define DEF_SKIP_LIST_REMOVE_NODE(KEY_TYPE, KNAME, VALUE_TYPE, VNAME) \
 bool skip_list_remove_node_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l, skip_node_##KNAME##_##VNAME##_t *node){ \
-    if(node == NULL || node == l->header){ \
+    if(!l || node == NULL || node == l->header){ \
         return false; \
     } \
     KEY_TYPE key = node->key; \
@@ -365,6 +373,7 @@ bool skip_list_remove_node_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l,
 
 #define DEF_SKIP_LIST_GET_RANK(KEY_TYPE, KNAME, VALUE_TYPE, VNAME) \
 unsigned long skip_list_get_rank_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l, KEY_TYPE key){ \
+    if (!l) return 0; \
     unsigned long rank = 0; \
     skip_node_##KNAME##_##VNAME##_t *cur = l->header; \
     for (int i = l->level-1; i >= 0; i--) { \
@@ -389,7 +398,7 @@ unsigned long skip_list_get_rank_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##
 
 #define DEF_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KNAME, VALUE_TYPE, VNAME) \
 unsigned long skip_list_get_node_rank_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l, skip_node_##KNAME##_##VNAME##_t *node){ \
-    if(node == NULL || node == l->header){ \
+    if(!l || node == NULL || node == l->header){ \
         return 0; \
     } \
     unsigned long rank = 0; \
@@ -414,6 +423,7 @@ unsigned long skip_list_get_node_rank_##KNAME##_##VNAME(skip_list_##KNAME##_##VN
 
 #define DEF_SKIP_LIST_GET_NODE_BY_RANK(KEY_TYPE, KNAME, VALUE_TYPE, VNAME) \
 skip_node_##KNAME##_##VNAME##_t *skip_list_get_node_by_rank_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l, unsigned long rank){ \
+    if (!l) return NULL; \
     unsigned long traversed = 0; \
     skip_node_##KNAME##_##VNAME##_t *cur = l->header; \
     for (int i = l->level-1; i >= 0; i--) { \
@@ -430,6 +440,7 @@ skip_node_##KNAME##_##VNAME##_t *skip_list_get_node_by_rank_##KNAME##_##VNAME(sk
 
 #define DEF_SKIP_LIST_PRINT(KEY_TYPE, KNAME, VALUE_TYPE, VNAME) \
 void skip_list_print_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l){ \
+    if (!l) return; \
     printf("list count: %lu, level is %d.\n", l->length, l->level); \
     for(int i=l->level-1; i>=0; i--){ \
         printf("level %d: ", i); \

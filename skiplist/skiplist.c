@@ -48,6 +48,7 @@ DEF_ELEMENT_PRINT(double, f, "%f")
 
 skip_node_t *skip_node_create(int level, element_t key, element_t value){
     skip_node_t *node = malloc(sizeof(*node) + level*(sizeof(struct skiplist_level)));
+    if (!node) return NULL;
     node->key = key;
     node->value = value;
     return node;
@@ -87,6 +88,7 @@ void skip_list_print_ ## KEY_FIELD(skip_list_t *l){ \
 
 
 void skip_list_print(skip_list_t *l){
+    if (!l) return;
     printf("list count: %lu, level is %d.\n", l->length, l->level);
     for(int i=l->level-1; i>=0; i--){
         printf("level %d: ", i);
@@ -102,6 +104,7 @@ void skip_list_print(skip_list_t *l){
 
 
 void skip_list_rank_print(skip_list_t *l){
+    if (!l) return;
     printf("list count: %lu, level is %d.\n", l->length, l->level);
     for(int i=l->level-1; i>=0; i--){
         printf("level %d(span%lu): ", i,l->header->level[i].span);
@@ -114,6 +117,7 @@ void skip_list_rank_print(skip_list_t *l){
 }
 
 void skip_list_addr_print(skip_list_t *l){
+    if (!l) return;
     printf("list count: %lu, level is %d.\n", l->length, l->level);
     for(int i=l->level-1; i>=0; i--){
         printf("level %d(%p): ", i, l->header);
@@ -150,9 +154,11 @@ static int element_compare_s(element_t e1, element_t e2){
 
 skip_list_t* skip_list_create(element_type_t key_typeid, element_type_t value_typeid, compare_func_t compare){
     skip_list_t *slist = malloc(sizeof(*slist));
+    if (!slist) return NULL;
     slist->level = 1;
     slist->length = 0;
     skip_node_t *header = skip_node_create(SKIPLIST_MAXLEVEL, (element_t)0, (element_t)0);
+    if (!header) { free(slist); return NULL; }
     header->backward = header;
     for(int i=0; i<SKIPLIST_MAXLEVEL; i++){
         header->level[i].forward = header;
@@ -169,6 +175,7 @@ skip_list_t* skip_list_create(element_type_t key_typeid, element_type_t value_ty
 
 
 void skip_list_destroy(skip_list_t *l){
+    if (!l) return;
     skip_node_t *cur = l->header->level[0].forward;
     for(skip_node_t *next=cur->level[0].forward; cur!=l->header; cur=next, next=cur->level[0].forward){
         skip_node_destroy(cur);
@@ -207,6 +214,7 @@ skip_node_t *skip_list_insert(skip_list_t *l, element_t key, element_t value){
     }
     int insert_level = random_level();
     skip_node_t *node = skip_node_create(insert_level, key, value);
+    if (!node) return NULL;
     if(insert_level > l->level){
         for(int i=l->level; i<insert_level; i++){
             rank[i] = 0;
@@ -237,6 +245,7 @@ skip_node_t *skip_list_insert_multi(skip_list_t *l, element_t key, element_t val
     unsigned long rank[SKIPLIST_MAXLEVEL] = {};
     int insert_level = random_level();
     skip_node_t *node = skip_node_create(insert_level, key, value);
+    if (!node) return NULL;
     skip_node_t *cur = l->header;
     for(int i=l->level-1; i>=0; i--){
         rank[i] = i == (l->level-1) ? 0 : rank[i+1];
@@ -278,6 +287,7 @@ skip_node_t *skip_list_insert_multi(skip_list_t *l, element_t key, element_t val
 
 
 skip_node_t *skip_list_find(skip_list_t *l, element_t ele){
+    if (!l) return NULL;
     skip_node_t *cur = l->header;
     for (int i = l->level-1; i >= 0; i--) {
         while(cur->level[i].forward != l->header){
@@ -299,6 +309,7 @@ skip_node_t *skip_list_find(skip_list_t *l, element_t ele){
 
 
 bool skip_list_remove(skip_list_t *l, element_t ele){
+    if (!l) return false;
     skip_node_t *update[SKIPLIST_MAXLEVEL] = {};
     skip_node_t *cur = l->header;
     for(int i=l->level-1; i>=0; i--){
@@ -337,7 +348,7 @@ bool skip_list_remove(skip_list_t *l, element_t ele){
 
 
 bool skip_list_remove_node(skip_list_t *l, skip_node_t *node){
-    if(node == NULL || node == l->header){
+    if(!l || node == NULL || node == l->header){
         return false;
     }
     element_t ele = node->key;
@@ -380,6 +391,7 @@ bool skip_list_remove_node(skip_list_t *l, skip_node_t *node){
 
 
 unsigned long skip_list_get_rank(skip_list_t *l, element_t ele){
+    if (!l) return 0;
     unsigned long rank = 0;
     skip_node_t *cur = l->header;
     for (int i = l->level-1; i >= 0; i--) {
@@ -404,7 +416,7 @@ unsigned long skip_list_get_rank(skip_list_t *l, element_t ele){
 
 
 unsigned long skip_list_get_node_rank(skip_list_t *l, skip_node_t *node){
-    if(node == NULL || node == l->header){
+    if(!l || node == NULL || node == l->header){
         return 0;
     }
     unsigned long rank = 0;
@@ -429,6 +441,7 @@ unsigned long skip_list_get_node_rank(skip_list_t *l, skip_node_t *node){
 
 
 skip_node_t *skip_list_get_node_by_rank(skip_list_t *l, unsigned long rank){
+    if (!l) return NULL;
     unsigned long traversed = 0;
     skip_node_t *cur = l->header;
 
