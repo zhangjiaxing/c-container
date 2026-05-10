@@ -50,7 +50,7 @@
 | skiplist (v1) | 96.2s |
 | skiplist2 (v2) | 88.8s **(-8%)** |
 
-v2 的比较函数为编译期可见的直接调用（`compare_##KNAME##_##VNAME`），编译器可内联，配合零装箱的原生类型存储，性能已反超 v1。v1 未开启 `NDEBUG` 时，每次操作还需额外运行时类型检查，性能会进一步下降。
+v2 的比较函数为编译期可见的直接调用（`compare_##KNAME##_##VNAME`），编译器在 `-O2`/`-O3` 下会自动内联，无需额外添加 `inline` 关键字。配合零装箱的原生类型存储，v2 性能已反超 v1。v1 未开启 `NDEBUG` 时，每次操作还需额外运行时类型检查，性能会进一步下降。
 
 ## License
 
@@ -106,7 +106,7 @@ Each implementation runs: insert all + find all + remove all, timed as a whole:
 | skiplist (v1) | 96.2s |
 | skiplist2 (v2) | 88.8s **(-8%)** |
 
-v2's compare function is a direct, compile-time-visible call (`compare_##KNAME##_##VNAME`), allowing the compiler to inline. Combined with zero-boxing native type storage, v2 now outperforms v1. When `NDEBUG` is not defined, v1 incurs additional runtime type checks, further widening the gap.
+v2's compare function is a direct, compile-time-visible call (`compare_##KNAME##_##VNAME`); the compiler auto-inlines it at `-O2`/`-O3` — no `inline` keyword needed. Combined with zero-boxing native type storage, v2 now outperforms v1. When `NDEBUG` is not defined, v1 incurs additional runtime type checks, further widening the gap.
 
 ## License
 
