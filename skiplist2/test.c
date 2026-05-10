@@ -12,17 +12,14 @@ DECLARE_SKIP_LIST(uint32_t, u32, uint32_t, u32)
 DECLARE_SKIP_LIST(char *, s, void *, v)
 DECLARE_SKIP_LIST(double, d, int32_t, i32)
 
-// 2. 包含实现文件（包含宏定义 + random_level）
-#include "skiplist2.c"
-
-// 3. 定义比较函数（命名约定：compare_##KNAME##_##VNAME）
+// 2. 定义比较函数（命名约定：compare_##KNAME##_##VNAME）
 static int compare_s_int32(char *a, char *b) { return strcmp(a, b); }
 static int compare_i32_i32(int32_t a, int32_t b) { return a<b ? -1 : (a==b ? 0 : 1); }
 static int compare_u32_u32(uint32_t a, uint32_t b) { return a<b ? -1 : (a==b ? 0 : 1); }
 static int compare_s_v(char *a, char *b) { return strcmp(a, b); }
 static int compare_d_i32(double a, double b) { return a<b ? -1 : (a==b ? 0 : 1); }
 
-// 4. 用一条宏生成所有函数定义
+// 3. 用一条宏生成所有函数定义
 //    print 需要 C11 _Generic，通过编译时 -DSKIPLIST_USE_PRINT=1 开启
 DEF_SKIP_LIST(char *, s, int32_t, int32)
 DEF_SKIP_LIST(int32_t, i32, int32_t, i32)

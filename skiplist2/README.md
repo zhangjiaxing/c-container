@@ -9,7 +9,8 @@
 1. 使用 C 预处理器 `##` 标记粘贴（token pasting），为指定类型组合生成独立的跳表代码，类似 C++ template。
 2. 节点直接存储原生 C 类型，无 union、无装箱、无间接访问，理论上零额外开销。
 3. 结构体内嵌函数指针（类似虚表），通过 `.insert()`、`.find()` 等统一的接口风格调用。
-4. 功能完整：支持唯一 key 插入、重复 key 插入（`insert_multi`）、按 key 查找/删除、按节点指针删除、按排名查询（`get_rank`/`get_node_rank`/`get_node_by_rank`）、销毁。打印函数（`DEF_SKIP_LIST_PRINT`）使用 `_Generic`，需 C11，不包含在 `DEF_SKIP_LIST` 中，用户按需单独调用。
+4. **单头文件**：`skiplist2.h` 包含完整实现，使用时只需 `#define SKIPLIST2_IMPLEMENTATION` 后 `#include "skiplist2.h"` 即可，零依赖。
+5. 功能完整：支持唯一 key 插入、重复 key 插入（`insert_multi`）、按 key 查找/删除、按节点指针删除、按排名查询（`get_rank`/`get_node_rank`/`get_node_by_rank`）、销毁。打印函数（`DEF_SKIP_LIST_PRINT`）使用 `_Generic`，需 C11，不包含在 `DEF_SKIP_LIST` 中，用户按需单独调用。
 
 ### 核心实现
 
@@ -28,8 +29,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `skiplist2.h` | 宏定义：声明类型和函数原型 |
-| `skiplist2.c` | 宏定义 + 实现：`random_level` + 所有函数体 |
+| `skiplist2.h` | 完整库：声明宏 + 实现宏 + `random_level()`，单文件即拷即用 |
 | `test.c` | 功能测试和基准测试（从 skiplist v1 移植） |
 | `makefile` | 编译脚本，支持 C99 和 C11 两种目标 |
 
@@ -41,16 +41,13 @@
 // 1. 声明跳表类型和函数原型
 DECLARE_SKIP_LIST(char *, s, int32_t, int32)
 
-// 2. 包含实现（直接 include .c 文件）
-#include "skiplist2.c"
-
-// 3. 定义比较函数（命名约定：compare_##KNAME##_##VNAME）
+// 2. 定义比较函数（命名约定：compare_##KNAME##_##VNAME）
 static int compare_s_int32(char *a, char *b) { return strcmp(a, b); }
 
-// 4. 生成所有函数定义（print 不包含在内，如需使用请单独调用 DEF_SKIP_LIST_PRINT）
+// 3. 生成所有函数定义（print 不包含在内，如需使用请单独调用 DEF_SKIP_LIST_PRINT）
 DEF_SKIP_LIST(char *, s, int32_t, int32)
 
-// 5. 使用
+// 4. 使用
 void example() {
     skip_list_s_int32_t *list = skip_list_create_s_int32();
     list->insert(list, "key", 123);
@@ -78,17 +75,17 @@ void example() {
 
 | 子宏 | 声明位置 | 定义位置 |
 |------|----------|----------|
-| `DECLARE_SKIP_LIST_CREATE` / `DEF_SKIP_LIST_CREATE` | 创建跳表 | 头文件 / 源文件 |
-| `DECLARE_SKIP_LIST_DESTROY` / `DEF_SKIP_LIST_DESTROY` | 销毁跳表 | 头文件 / 源文件 |
-| `DECLARE_SKIP_LIST_INSERT` / `DEF_SKIP_LIST_INSERT` | 唯一 key 插入 | 头文件 / 源文件 |
-| `DECLARE_SKIP_LIST_INSERT_MULTI` / `DEF_SKIP_LIST_INSERT_MULTI` | 重复 key 插入 | 头文件 / 源文件 |
-| `DECLARE_SKIP_LIST_FIND` / `DEF_SKIP_LIST_FIND` | 按 key 查找 | 头文件 / 源文件 |
-| `DECLARE_SKIP_LIST_REMOVE` / `DEF_SKIP_LIST_REMOVE` | 按 key 删除 | 头文件 / 源文件 |
-| `DECLARE_SKIP_LIST_REMOVE_NODE` / `DEF_SKIP_LIST_REMOVE_NODE` | 按指针删除 | 头文件 / 源文件 |
-| `DECLARE_SKIP_LIST_GET_RANK` / `DEF_SKIP_LIST_GET_RANK` | 按 key 查排名 | 头文件 / 源文件 |
-| `DECLARE_SKIP_LIST_GET_NODE_RANK` / `DEF_SKIP_LIST_GET_NODE_RANK` | 按节点查排名 | 头文件 / 源文件 |
-| `DECLARE_SKIP_LIST_GET_NODE_BY_RANK` / `DEF_SKIP_LIST_GET_NODE_BY_RANK` | 按排名查节点 | 头文件 / 源文件 |
-| `DECLARE_SKIP_LIST_PRINT` / `DEF_SKIP_LIST_PRINT` | 打印跳表（需 C11 `_Generic`，`DEF_SKIP_LIST` 不包含） | 头文件 / 源文件 |
+| `DECLARE_SKIP_LIST_CREATE` / `DEF_SKIP_LIST_CREATE` | 创建跳表 | 头文件 |
+| `DECLARE_SKIP_LIST_DESTROY` / `DEF_SKIP_LIST_DESTROY` | 销毁跳表 | 头文件 |
+| `DECLARE_SKIP_LIST_INSERT` / `DEF_SKIP_LIST_INSERT` | 唯一 key 插入 | 头文件 |
+| `DECLARE_SKIP_LIST_INSERT_MULTI` / `DEF_SKIP_LIST_INSERT_MULTI` | 重复 key 插入 | 头文件 |
+| `DECLARE_SKIP_LIST_FIND` / `DEF_SKIP_LIST_FIND` | 按 key 查找 | 头文件 |
+| `DECLARE_SKIP_LIST_REMOVE` / `DEF_SKIP_LIST_REMOVE` | 按 key 删除 | 头文件 |
+| `DECLARE_SKIP_LIST_REMOVE_NODE` / `DEF_SKIP_LIST_REMOVE_NODE` | 按指针删除 | 头文件 |
+| `DECLARE_SKIP_LIST_GET_RANK` / `DEF_SKIP_LIST_GET_RANK` | 按 key 查排名 | 头文件 |
+| `DECLARE_SKIP_LIST_GET_NODE_RANK` / `DEF_SKIP_LIST_GET_NODE_RANK` | 按节点查排名 | 头文件 |
+| `DECLARE_SKIP_LIST_GET_NODE_BY_RANK` / `DEF_SKIP_LIST_GET_NODE_BY_RANK` | 按排名查节点 | 头文件 |
+| `DECLARE_SKIP_LIST_PRINT` / `DEF_SKIP_LIST_PRINT` | 打印跳表（需 C11 `_Generic`，`DEF_SKIP_LIST` 不包含） | 头文件 |
 
 ### foreach 遍历宏
 
@@ -122,17 +119,12 @@ skip_list_foreach_reverse_safe(cur, list, tmp) {
 
 ### 编译
 
-C99 模式（核心功能，不含 print）：
-
 ```bash
-make test
+make test      # C99 模式（不含 print）
+make test-c11  # C11 模式（含 print）
 ```
 
-C11 模式（含 print）：
-
-```bash
-make test-c11
-```
+`skiplist2` 是单头文件库，只需将 `skiplist2.h` 拷贝到项目中 `#include` 即可，零依赖。
 
 一键编译并测试两种模式：
 
@@ -164,6 +156,7 @@ make
 | 代码体积 | 一份代码处理所有类型 | 每对类型组合生成独立代码 |
 | 扩展性 | 扩展 `element_t` union 即可 | 需为每对类型组合调用宏 |
 | 语言标准 | 需 C11（`_Generic`） | 核心功能 C99，print 需 C11 |
+| 分发方式 | 传统 .h + .c | 单头文件（`skiplist2.h`），即拷即用 |
 | 遍历方式 | 内置 foreach 宏 | `skip_list_foreach` / `skip_list_foreach_safe` / `skip_list_foreach_reverse` / `skip_list_foreach_reverse_safe` 宏 |
 
 ### License

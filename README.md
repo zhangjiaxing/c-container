@@ -32,7 +32,7 @@
 | 代码体积 | 一份代码处理所有类型 | 每对类型组合生成独立代码 |
 | 扩展新类型 | 扩展 `element_t` union 即可 | 调用宏参数 |
 | 语言标准 | 需 C11（`_Generic`） | 核心功能 C99，print 需 C11 |
-| 编译方式 | 传统 .h + .c | `DECLARE_SKIP_LIST` + `DEF_SKIP_LIST` 两宏 |
+| 编译方式 | 传统 .h + .c | 单头文件：`DECLARE_SKIP_LIST` + `DEF_SKIP_LIST` 两宏 |
 
 ## License
 
