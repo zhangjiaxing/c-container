@@ -1,3 +1,9 @@
+[中文](#中文) | [English](#english)
+
+---
+
+<a id="中文"></a>
+
 # skiplist2 — 宏模板跳表
 
 一个用 C 宏模板生成的跳表（skiplist）实现，在编译期为每对 key/value 类型组合生成类型专用的代码，无运行时类型开销。
@@ -73,19 +79,19 @@ void example() {
 
 每个子宏对应一个独立的函数声明或定义，可直接调用（不依赖组合宏）：
 
-| 子宏 | 声明位置 | 定义位置 |
-|------|----------|----------|
-| `DECLARE_SKIP_LIST_CREATE` / `DEF_SKIP_LIST_CREATE` | 创建跳表 | 头文件 |
-| `DECLARE_SKIP_LIST_DESTROY` / `DEF_SKIP_LIST_DESTROY` | 销毁跳表 | 头文件 |
-| `DECLARE_SKIP_LIST_INSERT` / `DEF_SKIP_LIST_INSERT` | 唯一 key 插入 | 头文件 |
-| `DECLARE_SKIP_LIST_INSERT_MULTI` / `DEF_SKIP_LIST_INSERT_MULTI` | 重复 key 插入 | 头文件 |
-| `DECLARE_SKIP_LIST_FIND` / `DEF_SKIP_LIST_FIND` | 按 key 查找 | 头文件 |
-| `DECLARE_SKIP_LIST_REMOVE` / `DEF_SKIP_LIST_REMOVE` | 按 key 删除 | 头文件 |
-| `DECLARE_SKIP_LIST_REMOVE_NODE` / `DEF_SKIP_LIST_REMOVE_NODE` | 按指针删除 | 头文件 |
-| `DECLARE_SKIP_LIST_GET_RANK` / `DEF_SKIP_LIST_GET_RANK` | 按 key 查排名 | 头文件 |
-| `DECLARE_SKIP_LIST_GET_NODE_RANK` / `DEF_SKIP_LIST_GET_NODE_RANK` | 按节点查排名 | 头文件 |
-| `DECLARE_SKIP_LIST_GET_NODE_BY_RANK` / `DEF_SKIP_LIST_GET_NODE_BY_RANK` | 按排名查节点 | 头文件 |
-| `DECLARE_SKIP_LIST_PRINT` / `DEF_SKIP_LIST_PRINT` | 打印跳表（需 C11 `_Generic`，`DEF_SKIP_LIST` 不包含） | 头文件 |
+| 子宏 | 说明 |
+|------|------|
+| `DECLARE_SKIP_LIST_CREATE` / `DEF_SKIP_LIST_CREATE` | 创建跳表 |
+| `DECLARE_SKIP_LIST_DESTROY` / `DEF_SKIP_LIST_DESTROY` | 销毁跳表 |
+| `DECLARE_SKIP_LIST_INSERT` / `DEF_SKIP_LIST_INSERT` | 唯一 key 插入 |
+| `DECLARE_SKIP_LIST_INSERT_MULTI` / `DEF_SKIP_LIST_INSERT_MULTI` | 重复 key 插入 |
+| `DECLARE_SKIP_LIST_FIND` / `DEF_SKIP_LIST_FIND` | 按 key 查找 |
+| `DECLARE_SKIP_LIST_REMOVE` / `DEF_SKIP_LIST_REMOVE` | 按 key 删除 |
+| `DECLARE_SKIP_LIST_REMOVE_NODE` / `DEF_SKIP_LIST_REMOVE_NODE` | 按指针删除 |
+| `DECLARE_SKIP_LIST_GET_RANK` / `DEF_SKIP_LIST_GET_RANK` | 按 key 查排名 |
+| `DECLARE_SKIP_LIST_GET_NODE_RANK` / `DEF_SKIP_LIST_GET_NODE_RANK` | 按节点查排名 |
+| `DECLARE_SKIP_LIST_GET_NODE_BY_RANK` / `DEF_SKIP_LIST_GET_NODE_BY_RANK` | 按排名查节点 |
+| `DECLARE_SKIP_LIST_PRINT` / `DEF_SKIP_LIST_PRINT` | 打印跳表（需 C11 `_Generic`，`DEF_SKIP_LIST` 不包含） |
 
 ### foreach 遍历宏
 
@@ -93,9 +99,9 @@ void example() {
 
 | 宏 | 说明 |
 |----|------|
-| `skip_list_foreach(node, list)` | 正序遍历，`node` 依次指向每个节点 |
+| `skip_list_foreach(node, list)` | 正序遍历 |
 | `skip_list_foreach_reverse(node, list)` | 逆序遍历 |
-| `skip_list_foreach_safe(node, list, tmp)` | 正序遍历，可安全删除当前节点，需传入 `tmp` 临时变量 |
+| `skip_list_foreach_safe(node, list, tmp)` | 正序遍历，可安全删除当前节点 |
 | `skip_list_foreach_reverse_safe(node, list, tmp)` | 逆序遍历，可安全删除当前节点 |
 
 ```c
@@ -163,3 +169,169 @@ make
 ### License
 
 本项目代码可自由使用。
+
+---
+
+<a id="english"></a>
+
+# skiplist2 — Macro-Template Skiplist
+
+A C skiplist generated via macro templates. Type-specialized code is produced at compile time for each key/value type pair — no runtime overhead.
+
+---
+
+### Design
+
+1. Uses C preprocessor `##` token pasting to generate independent skiplist code per type pair, analogous to C++ templates.
+2. Nodes store native C types directly — no union, no boxing, no indirection.
+3. Core operations are dispatched through struct-embedded function pointers (`.insert()`, `.find()`, etc.); the compare function is a direct, compile-time-visible call (`compare_##KNAME##_##VNAME`) allowing compiler inlining.
+4. **Single-header library**: just `#include "skiplist2.h"`, invoke two macros, and you're done — zero dependencies.
+5. Full-featured: unique insert, multi-key insert, find/remove by key, remove by node pointer, rank queries (`get_rank`/`get_node_rank`/`get_node_by_rank`), and destroy. Print (`DEF_SKIP_LIST_PRINT`) uses `_Generic` (C11), not included in `DEF_SKIP_LIST`.
+
+### Implementation
+
+- Two-macro type system:
+  - **`DECLARE_SKIP_LIST(type, kname, type, vname)`** — declares node struct, list struct, function pointer typedefs, and all function prototypes.
+  - **`DEF_SKIP_LIST(type, kname, type, vname)`** — generates all function definitions.
+- Each macro decomposes into individually named sub-macros (e.g. `DECLARE_SKIP_LIST_FIND`, `DEF_SKIP_LIST_FIND`). The composite macros call all sub-macros in sequence.
+- Compare function convention: `compare_##KNAME##_##VNAME`, user-defined, called directly (not through a pointer).
+- `_Generic` provides automatic format-string-free printing. Print requires C11 and is not bundled in `DEF_SKIP_LIST`.
+- Core functionality (excluding print) is C99-compatible.
+- Circular list: header's `backward` points to the tail.
+- span mechanism for `O(log N)` rank queries.
+- Same-key nodes ordered by memory address for fast pointer-based deletion.
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `skiplist2.h` | Complete library: declare macros + define macros + `random_level()` |
+| `test.c` | Functional and benchmark tests (ported from skiplist v1) |
+| `makefile` | Build script with C99 and C11 targets |
+
+### Usage
+
+```c
+#include "skiplist2.h"
+
+// 1. Declare list type and function prototypes
+DECLARE_SKIP_LIST(char *, s, int32_t, int32)
+
+// 2. Define compare function (convention: compare_##KNAME##_##VNAME)
+static int compare_s_int32(char *a, char *b) { return strcmp(a, b); }
+
+// 3. Generate all function definitions
+DEF_SKIP_LIST(char *, s, int32_t, int32)
+
+// 4. Use
+void example() {
+    skip_list_s_int32_t *list = skip_list_create_s_int32();
+    list->insert(list, "key", 123);
+    skip_node_s_int32_t *node = list->find(list, "key");
+    unsigned long rank = list->get_rank(list, "key");
+    list->remove(list, "key");
+    skip_list_destroy_s_int32(list);
+}
+```
+
+#### Parameters
+
+| Param | Meaning | Example |
+|-------|---------|---------|
+| `KEY_TYPE` | C type of key | `char *` |
+| `KNAME` | Short identifier for key type | `s` (for `char *`) |
+| `VALUE_TYPE` | C type of value | `int32_t` |
+| `VNAME` | Short identifier for value type | `int32` |
+
+`KNAME` and `VNAME` produce unique type and function names (e.g. `skip_list_s_int32_t`, `skip_list_insert_s_int32`).
+
+### Sub-Macros
+
+Each sub-macro corresponds to an independent declaration or definition:
+
+| Macro | Description |
+|-------|-------------|
+| `DECLARE_SKIP_LIST_CREATE` / `DEF_SKIP_LIST_CREATE` | Create list |
+| `DECLARE_SKIP_LIST_DESTROY` / `DEF_SKIP_LIST_DESTROY` | Destroy list |
+| `DECLARE_SKIP_LIST_INSERT` / `DEF_SKIP_LIST_INSERT` | Unique-key insert |
+| `DECLARE_SKIP_LIST_INSERT_MULTI` / `DEF_SKIP_LIST_INSERT_MULTI` | Multi-key insert |
+| `DECLARE_SKIP_LIST_FIND` / `DEF_SKIP_LIST_FIND` | Find by key |
+| `DECLARE_SKIP_LIST_REMOVE` / `DEF_SKIP_LIST_REMOVE` | Remove by key |
+| `DECLARE_SKIP_LIST_REMOVE_NODE` / `DEF_SKIP_LIST_REMOVE_NODE` | Remove by pointer |
+| `DECLARE_SKIP_LIST_GET_RANK` / `DEF_SKIP_LIST_GET_RANK` | Get rank by key |
+| `DECLARE_SKIP_LIST_GET_NODE_RANK` / `DEF_SKIP_LIST_GET_NODE_RANK` | Get rank by node |
+| `DECLARE_SKIP_LIST_GET_NODE_BY_RANK` / `DEF_SKIP_LIST_GET_NODE_BY_RANK` | Get node by rank |
+| `DECLARE_SKIP_LIST_PRINT` / `DEF_SKIP_LIST_PRINT` | Print (C11 `_Generic`, not in `DEF_SKIP_LIST`) |
+
+### foreach Macros
+
+All v2 list structs share the same field names, so traversal macros are generic:
+
+| Macro | Description |
+|-------|-------------|
+| `skip_list_foreach(node, list)` | Forward traversal |
+| `skip_list_foreach_reverse(node, list)` | Reverse traversal |
+| `skip_list_foreach_safe(node, list, tmp)` | Forward, safe deletion |
+| `skip_list_foreach_reverse_safe(node, list, tmp)` | Reverse, safe deletion |
+
+```c
+skip_node_s_int32_t *node;
+skip_list_foreach(node, list) {
+    printf("%d\n", node->value);
+}
+
+skip_node_s_v_t *cur, *tmp;
+skip_list_foreach_reverse_safe(cur, list, tmp) {
+    if (strcmp(cur->key, "chrome") == 0)
+        list->remove_node(list, cur);
+}
+```
+
+Internal helpers:
+- `DECLARE_SKIP_NODE` — declare node struct
+- `DEF_SKIP_NODE_CREATE` / `DEF_SKIP_NODE_DESTROY` — node create/destroy (static)
+
+### Build
+
+```bash
+make test      # C99 mode (no print)
+make test-c11  # C11 mode (with print)
+```
+
+Single-header library — just copy `skiplist2.h` into your project and `#include` it.
+
+```bash
+make
+```
+
+### Tests
+
+Ported from skiplist v1, covering:
+
+| Test | Types | Content |
+|------|-------|---------|
+| `test_basic` | `char*` → `int32_t` | Dedup insert, find, get_rank, get_node_by_rank, remove, remove_node |
+| `test_multi` | `char*` → `int32_t` | insert_multi duplicate keys |
+| `test_int32` | `int32_t` → `int32_t` | Mixed unique/multi, find, remove_node, get_node_rank |
+| `test_uint32_bench` | `uint32_t` → `uint32_t` | 10M element benchmark |
+| `test_srt` | `char*` → `void*` | String sort, reverse, safe traversal, get_rank, remove |
+| `test_double` | `double` → `int32_t` | Floating-point key |
+
+### Comparison with skiplist (v1)
+
+| Feature | skiplist (v1) | skiplist2 (v2) |
+|---------|---------------|----------------|
+| Type scheme | union `element_t` + `_Generic` | Macro templates, type-specialized |
+| Type checking | Runtime (`NDEBUG`-controlled) | Compile time |
+| Storage | `element_t` union | Native C types |
+| Performance | union copy + function-pointer dispatch | Zero-boxing, direct native storage |
+| Code size | One implementation for all types | Per-type-pair code generation |
+| Extensibility | Extend `element_t` union | Invoke macro with new params |
+| Language standard | C11 (`_Generic`) | Core C99, print C11 |
+| Distribution | Traditional .h + .c | Single-header (`skiplist2.h`) |
+| Compare call | Function pointer (indirect) | Direct call (inlineable) |
+| Traversal | Built-in foreach macros | `skip_list_foreach` / `skip_list_foreach_safe` / `skip_list_foreach_reverse` / `skip_list_foreach_reverse_safe` |
+
+### License
+
+This code is free to use.

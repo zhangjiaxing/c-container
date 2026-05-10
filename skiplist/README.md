@@ -1,3 +1,9 @@
+[中文](#中文) | [English](#english)
+
+---
+
+<a id="中文"></a>
+
 # skiplist — 动态类型跳表
 
 一个用 C 语言实现的跳表（skiplist），支持多种数据类型、排名查询、正序/逆序遍历。
@@ -87,3 +93,97 @@ make
 ### License
 
 本项目代码可自由使用。
+
+---
+
+<a id="english"></a>
+
+# skiplist — Dynamically-Typed Skiplist
+
+A C skiplist with dynamic typing, rank queries, and bidirectional traversal.
+
+---
+
+### Design
+
+1. Uses C11 `_Generic` + `union element_t` for runtime type polymorphism.
+2. Supports rank queries and forward/reverse traversal.
+3. Built-in types: `int32_t`, `uint32_t`, `int64_t`, `uint64_t`, `char*`, `void*`, `double`.
+4. Duplicate keys via `INSERT_MULTI` — useful for multi-dicts or as an in-memory DB index primitive.
+5. Macro-wrapped type checking (when `NDEBUG` is not defined) ensures type consistency.
+
+### Implementation
+
+- `element_t` union stores key/value of different types without per-type allocation.
+- `compare_func_t` function pointers enable polymorphic comparison; default comparators for `int32_t` through `string` are built in.
+- Nodes use flexible array members for multi-level forward pointers and spans.
+- **Circular list**: header's `backward` points to the tail, enabling O(1) reverse traversal.
+- span mechanism enables `O(log N)` rank queries.
+- Same-key nodes ordered by memory address, enabling fast pointer-based deletion.
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `skiplist.h` | Type definitions, macro API, function declarations |
+| `skiplist.c` | Core algorithm implementation |
+| `test.c` | Functional and benchmark tests |
+| `makefile` | Build script |
+
+### API
+
+```c
+// Create (default comparator)
+skip_list_t *list = SKIP_LIST_CREATE(key_type, value_type);
+
+// Create (custom comparator, key must be TPTR)
+skip_list_t *list = SKIP_LIST_CREATE_CUSTOM(key_type, value_type, compare_func);
+
+// Insert (returns NULL if key exists)
+SKIP_LIST_INSERT(list, key, value);
+
+// Insert (allows duplicate keys)
+SKIP_LIST_INSERT_MULTI(list, key, value);
+
+// Find
+SKIP_LIST_FIND(list, key);
+
+// Remove by key
+SKIP_LIST_REMOVE(list, key);
+
+// Remove by node pointer
+SKIP_LIST_REMOVE_NODE(list, node);
+
+// Rank queries
+SKIP_LIST_GET_NODE_BY_RANK(list, rank);
+unsigned long rank = SKIP_LIST_GET_RANK(list, key);
+unsigned long rank = SKIP_LIST_GET_NODE_RANK(list, node);
+
+// Print
+skip_list_print(list);           // key(value)
+skip_list_rank_print(list);      // key(span)
+skip_list_addr_print(list);      // key(addr)
+
+// Traversal
+skip_list_foreach(node, list)             { /* key, value */ }
+skip_list_foreach_safe(node, list)        { /* safe deletion */ }
+skip_list_foreach_reverse(node, list)     { /* reverse */ }
+skip_list_foreach_reverse_safe(node, list){ /* reverse, safe deletion */ }
+
+// Destroy
+SKIP_LIST_DESTROY(list);
+```
+
+### Debug Mode
+
+Define `NDEBUG` to disable runtime type checks for maximum performance. Without `NDEBUG`, every macro operation validates that key/value types match those declared at creation time; mismatches abort the program immediately.
+
+### Build
+
+```bash
+make
+```
+
+### License
+
+This code is free to use.

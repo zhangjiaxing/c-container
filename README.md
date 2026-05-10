@@ -1,3 +1,9 @@
+[中文](#中文) | [English](#english)
+
+---
+
+<a id="中文"></a>
+
 # skiplist / skiplist2 — C 跳表实现
 
 同一个跳表算法的两种 C 实现方案。
@@ -49,3 +55,59 @@ v2 的比较函数为编译期可见的直接调用（`compare_##KNAME##_##VNAME
 ## License
 
 参见 [LICENSE](LICENSE)。
+
+---
+
+<a id="english"></a>
+
+# skiplist / skiplist2 — C Skiplist Implementations
+
+Two C implementations of the same skiplist algorithm, exploring the space of generic programming in C.
+
+---
+
+## skiplist (v1) — Dynamic Typing
+
+A dynamically-typed skiplist using C11 `_Generic` + `union element_t` to handle multiple types at runtime.
+
+**Best for**: when you need one skiplist instance to handle multiple data types, or prefer not to commit to a type at compile time.
+
+→ [skiplist/README.md](skiplist/README.md)
+
+## skiplist2 (v2) — Macro Templates
+
+A macro-template skiplist that generates type-specialized code at compile time via the C preprocessor. Single-header library — copy and use.
+
+**Best for**: when performance matters, types are known at compile time, and you are willing to generate separate code per type pair.
+
+→ [skiplist2/README.md](skiplist2/README.md)
+
+## Comparison
+
+| | skiplist (v1) | skiplist2 (v2) |
+|---|---|---|
+| Type scheme | union + `_Generic` dynamic dispatch | Macro templates generate type-specialized code |
+| Type checking | Runtime (controlled by `NDEBUG`) | Compile time |
+| Storage | All key/value stored as `element_t` union | Native C types stored directly |
+| Call style | Macro → direct function call | Function pointers in struct (compare is direct, inlineable) |
+| Multi-type per instance | Yes | No |
+| Code size | One implementation for all types | Per-type-pair code generation |
+| Adding new types | Extend `element_t` union | Invoke macro with new params |
+| Language standard | Requires C11 (`_Generic`) | Core is C99, print requires C11 |
+| Distribution | Traditional .h + .c | Single-header: `DECLARE_SKIP_LIST` + `DEF_SKIP_LIST` |
+
+## Performance
+
+`uint32_t` key/value, 10 million elements, `-O3`, same dataset, v1 with `NDEBUG`.
+Each implementation runs: insert all + find all + remove all, timed as a whole:
+
+| Implementation | Total time (insert + find + remove) |
+|---------------|-------------------------------------|
+| skiplist (v1) | 96.2s |
+| skiplist2 (v2) | 88.8s **(-8%)** |
+
+v2's compare function is a direct, compile-time-visible call (`compare_##KNAME##_##VNAME`), allowing the compiler to inline. Combined with zero-boxing native type storage, v2 now outperforms v1. When `NDEBUG` is not defined, v1 incurs additional runtime type checks, further widening the gap.
+
+## License
+
+See [LICENSE](LICENSE)。
