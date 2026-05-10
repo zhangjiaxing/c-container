@@ -4,8 +4,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <limits.h>
-#include <errno.h>
 
 #include "skiplist.h"
 
@@ -180,11 +178,11 @@ void skip_list_destroy(skip_list_t *l){
 }
 
 static int random_level(void) {
-    static const int threshold = SKIPLIST_P*RAND_MAX;
+    static const int threshold = SKIPLIST_P * 0xFFFF;
     int level = 1;
-    while (rand() < threshold)
+    while ((rand() & 0xFFFF) < threshold)
         level += 1;
-    return (level<SKIPLIST_MAXLEVEL) ? level : SKIPLIST_MAXLEVEL;
+    return (level < SKIPLIST_MAXLEVEL) ? level : SKIPLIST_MAXLEVEL;
 }
 
 

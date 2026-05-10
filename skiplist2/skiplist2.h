@@ -482,9 +482,9 @@ DEF_SKIP_LIST_GET_NODE_RANK(KEY_TYPE, KNAME, VALUE_TYPE, VNAME) \
 DEF_SKIP_LIST_GET_NODE_BY_RANK(KEY_TYPE, KNAME, VALUE_TYPE, VNAME)
 
 static int random_level(void) {
-    static const int threshold = SKIPLIST_P * RAND_MAX;
+    static const int threshold = SKIPLIST_P * 0xFFFF;
     int level = 1;
-    while (rand() < threshold)
+    while ((rand() & 0xFFFF) < threshold)
         level += 1;
     return (level < SKIPLIST_MAXLEVEL) ? level : SKIPLIST_MAXLEVEL;
 }
