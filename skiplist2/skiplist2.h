@@ -71,7 +71,6 @@ struct skip_list_##KNAME##_##VNAME { \
     unsigned long length; \
     int level; \
     skip_node_##KNAME##_##VNAME##_t *header; \
-    int (*compare)(KEY_TYPE a, KEY_TYPE b); \
     insert_func_##KNAME##_##VNAME##_t insert; \
     insert_func_##KNAME##_##VNAME##_t insert_multi; \
     find_func_##KNAME##_##VNAME##_t find; \
@@ -151,7 +150,6 @@ skip_list_##KNAME##_##VNAME##_t* skip_list_create_##KNAME##_##VNAME(){ \
         header->level[i].span = 0; \
     } \
     slist->header = header; \
-    slist->compare = compare_##KNAME##_##VNAME; \
     slist->insert = &skip_list_insert_##KNAME##_##VNAME; \
     slist->insert_multi = &skip_list_insert_multi_##KNAME##_##VNAME; \
     slist->find = &skip_list_find_##KNAME##_##VNAME; \
@@ -183,7 +181,7 @@ skip_node_##KNAME##_##VNAME##_t *skip_list_insert_##KNAME##_##VNAME(skip_list_##
     for(int i=l->level-1; i>=0; i--){ \
         rank[i] = i == (l->level-1) ? 0 : rank[i+1]; \
         while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key, key); \
+            int comp = compare_##KNAME##_##VNAME(cur->level[i].forward->key, key); \
             if(comp < 0){ \
                 rank[i] += cur->level[i].span; \
                 cur = cur->level[i].forward; \
@@ -233,7 +231,7 @@ skip_node_##KNAME##_##VNAME##_t *skip_list_insert_multi_##KNAME##_##VNAME(skip_l
     for(int i=l->level-1; i>=0; i--){ \
         rank[i] = i == (l->level-1) ? 0 : rank[i+1]; \
         while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key, key); \
+            int comp = compare_##KNAME##_##VNAME(cur->level[i].forward->key, key); \
             if(comp < 0 || (comp == 0 && cur->level[i].forward < node)){ \
                 rank[i] += cur->level[i].span; \
                 cur = cur->level[i].forward; \
@@ -273,7 +271,7 @@ skip_node_##KNAME##_##VNAME##_t *skip_list_find_##KNAME##_##VNAME(skip_list_##KN
     skip_node_##KNAME##_##VNAME##_t *cur = l->header; \
     for (int i = l->level-1; i >= 0; i--) { \
         while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key, key); \
+            int comp = compare_##KNAME##_##VNAME(cur->level[i].forward->key, key); \
             if(comp < 0){ \
                 cur = cur->level[i].forward; \
             }else { \
@@ -282,7 +280,7 @@ skip_node_##KNAME##_##VNAME##_t *skip_list_find_##KNAME##_##VNAME(skip_list_##KN
         } \
     } \
     skip_node_##KNAME##_##VNAME##_t *next = cur->level[0].forward; \
-    if(next != l->header && l->compare(next->key, key) == 0){ \
+    if(next != l->header && compare_##KNAME##_##VNAME(next->key, key) == 0){ \
         return next; \
     }else{ \
        return NULL; \
@@ -296,7 +294,7 @@ bool skip_list_remove_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l, KEY_
     skip_node_##KNAME##_##VNAME##_t *cur = l->header; \
     for(int i=l->level-1; i>=0; i--){ \
         while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key, key); \
+            int comp = compare_##KNAME##_##VNAME(cur->level[i].forward->key, key); \
             if(comp < 0){ \
                 cur = cur->level[i].forward; \
             }else { \
@@ -306,7 +304,7 @@ bool skip_list_remove_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l, KEY_
         update[i] = cur; \
     } \
     cur = cur->level[0].forward; \
-    if(cur == l->header || l->compare(cur->key, key) != 0){ \
+    if(cur == l->header || compare_##KNAME##_##VNAME(cur->key, key) != 0){ \
         return false; \
     } \
     for(int i=l->level-1; i>=0 ; i--){ \
@@ -338,7 +336,7 @@ bool skip_list_remove_node_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##_t *l,
     skip_node_##KNAME##_##VNAME##_t *cur = l->header; \
     for(int i=l->level-1; i>=0; i--){ \
         while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key, key); \
+            int comp = compare_##KNAME##_##VNAME(cur->level[i].forward->key, key); \
             if(comp < 0 || (comp == 0 && cur->level[i].forward < node)){ \
                 cur = cur->level[i].forward; \
             }else{ \
@@ -378,7 +376,7 @@ unsigned long skip_list_get_rank_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##
     skip_node_##KNAME##_##VNAME##_t *cur = l->header; \
     for (int i = l->level-1; i >= 0; i--) { \
         while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key, key); \
+            int comp = compare_##KNAME##_##VNAME(cur->level[i].forward->key, key); \
             if(comp < 0){ \
                 rank += cur->level[i].span; \
                 cur = cur->level[i].forward; \
@@ -389,7 +387,7 @@ unsigned long skip_list_get_rank_##KNAME##_##VNAME(skip_list_##KNAME##_##VNAME##
     } \
     rank += cur->level[0].span; \
     cur = cur->level[0].forward; \
-    if(cur != l->header && l->compare(cur->key, key) == 0){ \
+    if(cur != l->header && compare_##KNAME##_##VNAME(cur->key, key) == 0){ \
         return rank; \
     }else{ \
         return 0; \
@@ -405,7 +403,7 @@ unsigned long skip_list_get_node_rank_##KNAME##_##VNAME(skip_list_##KNAME##_##VN
     skip_node_##KNAME##_##VNAME##_t *cur = l->header; \
     for(int i = l->level-1; i >= 0; i--) { \
         while(cur->level[i].forward != l->header){ \
-            int comp = l->compare(cur->level[i].forward->key, node->key); \
+            int comp = compare_##KNAME##_##VNAME(cur->level[i].forward->key, node->key); \
             if(comp < 0 || (comp == 0 && cur->level[i].forward <= node)){ \
                 rank += cur->level[i].span; \
                 cur = cur->level[i].forward; \

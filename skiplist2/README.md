@@ -8,8 +8,8 @@
 
 1. 使用 C 预处理器 `##` 标记粘贴（token pasting），为指定类型组合生成独立的跳表代码，类似 C++ template。
 2. 节点直接存储原生 C 类型，无 union、无装箱、无间接访问，理论上零额外开销。
-3. 结构体内嵌函数指针（类似虚表），通过 `.insert()`、`.find()` 等统一的接口风格调用。
-4. **单头文件**：`skiplist2.h` 包含完整实现，使用时只需 `#define SKIPLIST2_IMPLEMENTATION` 后 `#include "skiplist2.h"` 即可，零依赖。
+3. 核心操作通过结构体内嵌函数指针调用（`.insert()`、`.find()` 等），比较函数为编译期可见的直接调用（`compare_##KNAME##_##VNAME`），可被编译器内联。
+4. **单头文件**：`skiplist2.h` 包含完整实现，`#include "skiplist2.h"` 后调用 `DECLARE_SKIP_LIST` + `DEF_SKIP_LIST` 两宏即可，零依赖。
 5. 功能完整：支持唯一 key 插入、重复 key 插入（`insert_multi`）、按 key 查找/删除、按节点指针删除、按排名查询（`get_rank`/`get_node_rank`/`get_node_by_rank`）、销毁。打印函数（`DEF_SKIP_LIST_PRINT`）使用 `_Generic`，需 C11，不包含在 `DEF_SKIP_LIST` 中，用户按需单独调用。
 
 ### 核心实现
@@ -18,7 +18,7 @@
   - **`DECLARE_SKIP_LIST(KEY_TYPE, KNAME, VALUE_TYPE, VNAME)`** — 在头文件位置声明节点结构体、跳表结构体、函数指针类型、所有函数原型。
   - **`DEF_SKIP_LIST(KEY_TYPE, KNAME, VALUE_TYPE, VNAME)`** — 在源文件位置生成所有函数定义。
 - 每个宏内部拆分为若干独立命名的子宏（如 `DECLARE_SKIP_LIST_FIND`、`DEF_SKIP_LIST_FIND`），提高可读性；组合宏 `DECLARE_SKIP_LIST` / `DEF_SKIP_LIST` 依次调用所有子宏。
-- 比较函数命名约定：`compare_##KNAME##_##VNAME`，用户自行定义。
+- 比较函数命名约定：`compare_##KNAME##_##VNAME`，用户自行定义。各 DEF 宏通过该名称直接调用比较函数（非函数指针），编译器可内联。
 - `_Generic` 实现 print 的自动格式化，无需传递格式字符串。print 依赖 C11，因此 `DEF_SKIP_LIST` 组合宏不包含 `DEF_SKIP_LIST_PRINT`，用户按需单独调用。
 - 核心跳表功能（不含 print）兼容 C99。
 - 循环链表设计：header 的 backward 指向尾节点。
@@ -157,6 +157,7 @@ make
 | 扩展性 | 扩展 `element_t` union 即可 | 需为每对类型组合调用宏 |
 | 语言标准 | 需 C11（`_Generic`） | 核心功能 C99，print 需 C11 |
 | 分发方式 | 传统 .h + .c | 单头文件（`skiplist2.h`），即拷即用 |
+| 比较调用 | 函数指针（间接） | 直接调用（可内联） |
 | 遍历方式 | 内置 foreach 宏 | `skip_list_foreach` / `skip_list_foreach_safe` / `skip_list_foreach_reverse` / `skip_list_foreach_reverse_safe` 宏 |
 
 ### License
