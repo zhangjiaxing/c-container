@@ -4,5 +4,8 @@ build/
 # IDE config
 .idea/
 
+# tooling config
+.claude/
+
 # OS junk
 .DS_Store
