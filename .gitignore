@@ -1,1 +1,8 @@
+# build artifacts
+build/
 
+# IDE config
+.idea/
+
+# OS junk
+.DS_Store
